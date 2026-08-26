@@ -68,200 +68,217 @@ const samplePhotoBank = [
 
 class NeonDatabase {
   private initialized = false;
+  private initPromise: Promise<void> | null = null;
 
   private async ensureInitialized() {
     if (this.initialized) return;
-    try {
-      if (!process.env.DATABASE_URL) {
-        console.warn("DATABASE_URL env variable not set. Skipping DB initialization check.");
-        return;
-      }
-
-      // 1. Check/Insert Admin User
-      const admins = await sql`SELECT id FROM admin_users LIMIT 1`;
-      if (admins.length === 0) {
-        const passwordHash = bcrypt.hashSync("admin123", 10);
-        await sql`
-          INSERT INTO admin_users (id, email, name, password_hash, created_at)
-          VALUES (
-            'admin-01', 
-            'admin@studioin.com', 
-            'Studioin Photographer', 
-            ${passwordHash}, 
-            ${new Date().toISOString()}
-          )
-          ON CONFLICT (id) DO NOTHING
-        `;
-        console.log("[NeonDatabase] Default admin user initialized.");
-      }
-
-      // 2. Check/Insert Sample Galleries
-      const galleries = await sql`SELECT id FROM galleries LIMIT 1`;
-      if (galleries.length === 0) {
-        console.log("[NeonDatabase] Galleries table empty. Inserting sample data...");
-        // Initialize default sample data
-        const now = new Date();
-        const expires1 = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
-        const previewDelete1 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
-        
-        const g1: Gallery = {
-          id: "gal-andi-sinta",
-          client_name: "Andi & Sinta",
-          event_name: "Wedding Celebration",
-          event_date: "2026-08-20",
-          drive_folder_id: "1A2B3C4D5E6F7G8H9I0J",
-          drive_folder_url: "https://drive.google.com/drive/folders/1A2B3C4D5E6F7G8H9I0J",
-          access_token: "andi-sinta-w7k9",
-          pin_hash: bcrypt.hashSync("8291", 10),
-          pin_code: "8291",
-          has_pin: true,
-          status: "ready",
-          total_photos: 48,
-          processed_photos: 48,
-          expires_at: expires1,
-          preview_delete_at: previewDelete1,
-          max_selections: 15,
-          allow_download: true,
-          created_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-
-        const expires2 = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
-        const previewDelete2 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
-        const g2: Gallery = {
-          id: "gal-budi-ayu",
-          client_name: "Budi & Ayu",
-          event_name: "Prewedding Shoot",
-          event_date: "2026-08-22",
-          drive_folder_id: "2B3C4D5E6F7G8H9I0J1K",
-          drive_folder_url: "https://drive.google.com/drive/folders/2B3C4D5E6F7G8H9I0J1K",
-          access_token: "budi-ayu-p2m8",
-          pin_hash: null,
-          pin_code: null,
-          has_pin: false,
-          status: "ready",
-          total_photos: 36,
-          processed_photos: 36,
-          expires_at: expires2,
-          preview_delete_at: previewDelete2,
-          max_selections: 0,
-          allow_download: false,
-          created_at: new Date(now.getTime() - 4 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-
-        const expiredDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
-        const previewDelete3 = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000).toISOString();
-        const g3: Gallery = {
-          id: "gal-komang-putri",
-          client_name: "Komang & Putri",
-          event_name: "Graduation Session",
-          event_date: "2026-08-15",
-          drive_folder_id: "3C4D5E6F7G8H9I0J1K2L",
-          drive_folder_url: "https://drive.google.com/drive/folders/3C4D5E6F7G8H9I0J1K2L",
-          access_token: "komang-putri-g9x1",
-          pin_hash: null,
-          pin_code: null,
-          has_pin: false,
-          status: "expired",
-          total_photos: 24,
-          processed_photos: 24,
-          expires_at: expiredDate,
-          preview_delete_at: previewDelete3,
-          max_selections: 10,
-          allow_download: true,
-          created_at: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-
-        // Insert galleries
-        await this.createGallery(g1);
-        await this.createGallery(g2);
-        await this.createGallery(g3);
-
-        // Generate photos for Andi & Sinta
-        const photosG1: Photo[] = [];
-        for (let i = 0; i < 48; i++) {
-          const sample = samplePhotoBank[i % samplePhotoBank.length];
-          const photoNum = String(i + 1).padStart(4, "0");
-          photosG1.push({
-            id: `p1-${i + 1}`,
-            gallery_id: g1.id,
-            drive_file_id: `drive-f1-${i + 1}`,
-            filename: `IMG_${photoNum}.JPG`,
-            mime_type: "image/jpeg",
-            thumbnail_url: sample.thumb,
-            preview_url: sample.preview,
-            width: 6000,
-            height: 4000,
-            sort_order: i + 1,
-            created_at: new Date().toISOString(),
-          });
-        }
-        await this.addPhotos(g1.id, photosG1);
-
-        // Generate photos for Budi & Ayu
-        const photosG2: Photo[] = [];
-        for (let i = 0; i < 36; i++) {
-          const sample = samplePhotoBank[(i + 3) % samplePhotoBank.length];
-          const photoNum = String(i + 1).padStart(4, "0");
-          photosG2.push({
-            id: `p2-${i + 1}`,
-            gallery_id: g2.id,
-            drive_file_id: `drive-f2-${i + 1}`,
-            filename: `PRE_${photoNum}.JPG`,
-            mime_type: "image/jpeg",
-            thumbnail_url: sample.thumb,
-            preview_url: sample.preview,
-            width: 6000,
-            height: 4000,
-            sort_order: i + 1,
-            created_at: new Date().toISOString(),
-          });
-        }
-        await this.addPhotos(g2.id, photosG2);
-
-        // Generate photos for Komang & Putri
-        const photosG3: Photo[] = [];
-        for (let i = 0; i < 24; i++) {
-          const sample = samplePhotoBank[(i + 5) % samplePhotoBank.length];
-          const photoNum = String(i + 1).padStart(4, "0");
-          photosG3.push({
-            id: `p3-${i + 1}`,
-            gallery_id: g3.id,
-            drive_file_id: `drive-f3-${i + 1}`,
-            filename: `GRAD_${photoNum}.JPG`,
-            mime_type: "image/jpeg",
-            thumbnail_url: sample.thumb,
-            preview_url: sample.preview,
-            width: 6000,
-            height: 4000,
-            sort_order: i + 1,
-            created_at: new Date().toISOString(),
-          });
-        }
-        await this.addPhotos(g3.id, photosG3);
-
-        // Insert sample selection for Andi & Sinta
-        const s1: Selection = {
-          id: "sel-andi-01",
-          gallery_id: g1.id,
-          client_name: "Andi & Sinta",
-          client_email: "andi.sinta@example.com",
-          client_notes: "Mohon diedit tone warm untuk album cetak utama.",
-          submitted_at: new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString(),
-          status: "submitted",
-          selected_photo_ids: ["p1-1", "p1-3", "p1-4", "p1-7", "p1-8", "p1-12", "p1-15", "p1-18", "p1-22", "p1-25"],
-          created_at: new Date().toISOString(),
-        };
-        await this.createSelection(s1);
-        console.log("[NeonDatabase] Sample data initialized successfully.");
-      }
-
-      this.initialized = true;
-    } catch (err) {
-      console.error("[NeonDatabase] Database initialization error (ignore if tables are being set up):", err);
+    if (this.initPromise) {
+      await this.initPromise;
+      return;
     }
+
+    this.initPromise = (async () => {
+      try {
+        if (!process.env.DATABASE_URL) {
+          console.warn("DATABASE_URL env variable not set. Skipping DB initialization check.");
+          return;
+        }
+
+        // 1. Check/Insert Admin User
+        const admins = await sql`SELECT id FROM admin_users LIMIT 1`;
+        if (admins.length === 0) {
+          const passwordHash = bcrypt.hashSync("admin123", 10);
+          await sql`
+            INSERT INTO admin_users (id, email, name, password_hash, created_at)
+            VALUES (
+              'admin-01', 
+              'admin@studioin.com', 
+              'Studioin Photographer', 
+              ${passwordHash}, 
+              ${new Date().toISOString()}
+            )
+            ON CONFLICT (id) DO NOTHING
+          `;
+          console.log("[NeonDatabase] Default admin user initialized.");
+        }
+
+        // 2. Check/Insert Sample Galleries
+        const galleries = await sql`SELECT id FROM galleries LIMIT 1`;
+        if (galleries.length === 0) {
+          console.log("[NeonDatabase] Galleries table empty. Inserting sample data...");
+          
+          // Set initialized to true during seeding to prevent recursive calls
+          this.initialized = true;
+
+          // Initialize default sample data
+          const now = new Date();
+          const expires1 = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
+          const previewDelete1 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          
+          const g1: Gallery = {
+            id: "gal-andi-sinta",
+            client_name: "Andi & Sinta",
+            event_name: "Wedding Celebration",
+            event_date: "2026-08-20",
+            drive_folder_id: "1A2B3C4D5E6F7G8H9I0J",
+            drive_folder_url: "https://drive.google.com/drive/folders/1A2B3C4D5E6F7G8H9I0J",
+            access_token: "andi-sinta-w7k9",
+            pin_hash: bcrypt.hashSync("8291", 10),
+            pin_code: "8291",
+            has_pin: true,
+            status: "ready",
+            total_photos: 48,
+            processed_photos: 48,
+            expires_at: expires1,
+            preview_delete_at: previewDelete1,
+            max_selections: 15,
+            allow_download: true,
+            created_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+
+          const expires2 = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
+          const previewDelete2 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          const g2: Gallery = {
+            id: "gal-budi-ayu",
+            client_name: "Budi & Ayu",
+            event_name: "Prewedding Shoot",
+            event_date: "2026-08-22",
+            drive_folder_id: "2B3C4D5E6F7G8H9I0J1K",
+            drive_folder_url: "https://drive.google.com/drive/folders/2B3C4D5E6F7G8H9I0J1K",
+            access_token: "budi-ayu-p2m8",
+            pin_hash: null,
+            pin_code: null,
+            has_pin: false,
+            status: "ready",
+            total_photos: 36,
+            processed_photos: 36,
+            expires_at: expires2,
+            preview_delete_at: previewDelete2,
+            max_selections: 0,
+            allow_download: false,
+            created_at: new Date(now.getTime() - 4 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+
+          const expiredDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
+          const previewDelete3 = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000).toISOString();
+          const g3: Gallery = {
+            id: "gal-komang-putri",
+            client_name: "Komang & Putri",
+            event_name: "Graduation Session",
+            event_date: "2026-08-15",
+            drive_folder_id: "3C4D5E6F7G8H9I0J1K2L",
+            drive_folder_url: "https://drive.google.com/drive/folders/3C4D5E6F7G8H9I0J1K2L",
+            access_token: "komang-putri-g9x1",
+            pin_hash: null,
+            pin_code: null,
+            has_pin: false,
+            status: "expired",
+            total_photos: 24,
+            processed_photos: 24,
+            expires_at: expiredDate,
+            preview_delete_at: previewDelete3,
+            max_selections: 10,
+            allow_download: true,
+            created_at: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+
+          // Insert galleries
+          await this.createGallery(g1);
+          await this.createGallery(g2);
+          await this.createGallery(g3);
+
+          // Generate photos for Andi & Sinta
+          const photosG1: Photo[] = [];
+          for (let i = 0; i < 48; i++) {
+            const sample = samplePhotoBank[i % samplePhotoBank.length];
+            const photoNum = String(i + 1).padStart(4, "0");
+            photosG1.push({
+              id: `p1-${i + 1}`,
+              gallery_id: g1.id,
+              drive_file_id: `drive-f1-${i + 1}`,
+              filename: `IMG_${photoNum}.JPG`,
+              mime_type: "image/jpeg",
+              thumbnail_url: sample.thumb,
+              preview_url: sample.preview,
+              width: 6000,
+              height: 4000,
+              sort_order: i + 1,
+              created_at: new Date().toISOString(),
+            });
+          }
+          await this.addPhotos(g1.id, photosG1);
+
+          // Generate photos for Budi & Ayu
+          const photosG2: Photo[] = [];
+          for (let i = 0; i < 36; i++) {
+            const sample = samplePhotoBank[(i + 3) % samplePhotoBank.length];
+            const photoNum = String(i + 1).padStart(4, "0");
+            photosG2.push({
+              id: `p2-${i + 1}`,
+              gallery_id: g2.id,
+              drive_file_id: `drive-f2-${i + 1}`,
+              filename: `PRE_${photoNum}.JPG`,
+              mime_type: "image/jpeg",
+              thumbnail_url: sample.thumb,
+              preview_url: sample.preview,
+              width: 6000,
+              height: 4000,
+              sort_order: i + 1,
+              created_at: new Date().toISOString(),
+            });
+          }
+          await this.addPhotos(g2.id, photosG2);
+
+          // Generate photos for Komang & Putri
+          const photosG3: Photo[] = [];
+          for (let i = 0; i < 24; i++) {
+            const sample = samplePhotoBank[(i + 5) % samplePhotoBank.length];
+            const photoNum = String(i + 1).padStart(4, "0");
+            photosG3.push({
+              id: `p3-${i + 1}`,
+              gallery_id: g3.id,
+              drive_file_id: `drive-f3-${i + 1}`,
+              filename: `GRAD_${photoNum}.JPG`,
+              mime_type: "image/jpeg",
+              thumbnail_url: sample.thumb,
+              preview_url: sample.preview,
+              width: 6000,
+              height: 4000,
+              sort_order: i + 1,
+              created_at: new Date().toISOString(),
+            });
+          }
+          await this.addPhotos(g3.id, photosG3);
+
+          // Insert sample selection for Andi & Sinta
+          const s1: Selection = {
+            id: "sel-andi-01",
+            gallery_id: g1.id,
+            client_name: "Andi & Sinta",
+            client_email: "andi.sinta@example.com",
+            client_notes: "Mohon diedit tone warm untuk album cetak utama.",
+            submitted_at: new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString(),
+            status: "submitted",
+            selected_photo_ids: ["p1-1", "p1-3", "p1-4", "p1-7", "p1-8", "p1-12", "p1-15", "p1-18", "p1-22", "p1-25"],
+            created_at: new Date().toISOString(),
+          };
+          await this.createSelection(s1);
+          console.log("[NeonDatabase] Sample data initialized successfully.");
+        }
+
+        this.initialized = true;
+      } catch (err) {
+        this.initialized = false;
+        console.error("[NeonDatabase] Database initialization error:", err);
+      } finally {
+        this.initPromise = null;
+      }
+    })();
+
+    await this.initPromise;
   }
 
   // --- Admin User Methods ---
