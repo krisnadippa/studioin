@@ -42,7 +42,13 @@ export class GalleryService {
     const previewDeleteAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
     const pinHash = input.pin && input.pin.trim() ? await bcrypt.hash(input.pin.trim(), 10) : null;
-    const accessToken = this.generateSecureToken(10);
+    const clientSlug = input.client_name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    
+    const randomSuffix = this.generateSecureToken(4).toLowerCase();
+    const accessToken = clientSlug ? `${clientSlug}-${randomSuffix}` : this.generateSecureToken(10);
     const galleryId = `gal-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
     const newGallery: Gallery = {
