@@ -827,27 +827,32 @@ export default function ClientGalleryPage({
       {lightboxIndex !== null && filteredPhotos[lightboxIndex] && (
         <div className="fixed inset-0 z-50 bg-black/95 flex flex-col justify-between select-none animate-fadeIn">
           {/* Lightbox Header Bar */}
-          <div className="p-4 sm:p-6 flex items-center justify-between text-white z-20">
-            <div className="flex items-center gap-3 font-mono text-xs text-zinc-300">
-              <span>{filteredPhotos[lightboxIndex].filename}</span>
-              <span className="text-zinc-600">•</span>
-              <span>
+          <div className="p-4 sm:p-6 flex items-center justify-between text-white z-20 gap-4">
+            {/* Left Info: Filename & Counter */}
+            <div className="flex items-center gap-2 sm:gap-3 font-mono text-xs text-zinc-300 min-w-0">
+              <span className="truncate max-w-[120px] sm:max-w-[200px]" title={filteredPhotos[lightboxIndex].filename}>
+                {filteredPhotos[lightboxIndex].filename}
+              </span>
+              <span className="text-zinc-600 shrink-0">•</span>
+              <span className="shrink-0">
                 {lightboxIndex + 1} of {filteredPhotos.length}
               </span>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Right Controls */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {/* Select button in Lightbox */}
               <button
                 onClick={() => toggleSelect(filteredPhotos[lightboxIndex].id)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors ${
+                className={`inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-xl text-xs font-bold transition-colors ${
                   selectedIds.has(filteredPhotos[lightboxIndex].id)
                     ? "bg-[#bef238] text-[#114234]"
                     : "bg-white/10 hover:bg-white/20 text-white border border-white/20"
                 }`}
+                title={selectedIds.has(filteredPhotos[lightboxIndex].id) ? "Selected" : "Select Photo"}
               >
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
-                <span>
+                <span className="hidden sm:inline">
                   {selectedIds.has(filteredPhotos[lightboxIndex].id) ? "Selected" : "Select Photo"}
                 </span>
               </button>
@@ -856,10 +861,11 @@ export default function ClientGalleryPage({
                 <a
                   href={`/api/gallery/${token}/download/${filteredPhotos[lightboxIndex].id}`}
                   download
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+                  title="Download HD photo"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Download</span>
+                  <span className="hidden sm:inline">Download</span>
                 </a>
               )}
 
@@ -868,6 +874,7 @@ export default function ClientGalleryPage({
                 onClick={() => setLightboxIndex(null)}
                 className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
                 aria-label="Close lightbox"
+                title="Close Lightbox"
               >
                 <X className="w-5 h-5" />
               </button>
