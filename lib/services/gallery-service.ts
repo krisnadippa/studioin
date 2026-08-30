@@ -102,9 +102,19 @@ export class GalleryService {
         const file = driveFiles[i];
         const photoId = `photo-${galleryId}-${i + 1}`;
 
-        // Build optimized thumbnail (~400px) and preview (~1600px) URLs
+        // Build optimized thumbnail (~500px) and high-definition preview (~2048px) URLs
         const thumbUrl = file.thumbnailLink || storageService.getThumbnailUrl(galleryId, photoId);
-        const previewUrl = file.thumbnailLink?.replace("=500", "=1600") || storageService.getPreviewUrl(galleryId, photoId);
+        let previewUrl = storageService.getPreviewUrl(galleryId, photoId);
+        if (file.thumbnailLink) {
+          if (file.thumbnailLink.includes("images.unsplash.com")) {
+            previewUrl = file.thumbnailLink.replace("w=500", "w=2048");
+          } else if (file.thumbnailLink.includes("googleusercontent.com")) {
+            // Replace trailing size param like =w500 or =s220 with =w2048
+            previewUrl = file.thumbnailLink.replace(/=([ws])?\d+/, "=w2048");
+          } else {
+            previewUrl = file.thumbnailLink.replace("=500", "=2048");
+          }
+        }
 
         photos.push({
           id: photoId,

@@ -100,6 +100,7 @@ export default function ClientSelectionReviewPage({
                   fill
                   sizes="(max-width: 640px) 50vw, 25vw"
                   className="object-cover"
+                  unoptimized
                 />
                 <div className="absolute top-2.5 left-2.5 bg-[#114234] text-[#bef238] p-1 rounded-full">
                   <Check className="w-3.5 h-3.5" />

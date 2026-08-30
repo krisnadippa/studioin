@@ -46,6 +46,21 @@ interface PublicPhoto {
   sort_order: number;
 }
 
+// Helper to convert size parameter to a high-definition 2048px (2K) format
+const getHDPreviewUrl = (url: string) => {
+  if (!url) return url;
+  if (url.includes("images.unsplash.com")) {
+    return url.replace("w=500", "w=2048").replace("w=1600", "w=2048");
+  }
+  if (url.includes("googleusercontent.com")) {
+    if (url.match(/=([ws])?\d+/)) {
+      return url.replace(/=([ws])?\d+/, "=w2048");
+    }
+    return `${url}=w2048`;
+  }
+  return url.replace("=500", "=2048").replace("=1600", "=2048");
+};
+
 export default function ClientGalleryPage({
   params,
 }: {
@@ -720,6 +735,7 @@ export default function ClientGalleryPage({
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                     className="object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
                     loading="lazy"
+                    unoptimized
                   />
 
                   {/* Gradient bottom overlay */}
@@ -872,12 +888,12 @@ export default function ClientGalleryPage({
             {/* Main Preview Image */}
             <div className="relative w-full h-full max-h-[82vh] flex items-center justify-center">
               <Image
-                src={filteredPhotos[lightboxIndex].preview_url}
+                src={getHDPreviewUrl(filteredPhotos[lightboxIndex].preview_url)}
                 alt={filteredPhotos[lightboxIndex].filename}
                 fill
                 priority
+                unoptimized
                 className="object-contain"
-                sizes="100vw"
               />
             </div>
 

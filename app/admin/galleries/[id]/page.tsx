@@ -438,6 +438,7 @@ export default function GalleryDetailPage({
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    unoptimized
                   />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white text-[10px] font-mono truncate">
                     {photo.filename}
