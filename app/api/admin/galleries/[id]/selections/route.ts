@@ -13,9 +13,9 @@ export async function GET(
   }
 
   const { id } = await params;
-  const gallery = await db.getGalleryById(id);
+  const gallery = await db.getGalleryById(id, user.userId);
   if (!gallery) {
-    return NextResponse.json({ error: "Gallery not found" }, { status: 404 });
+    return NextResponse.json({ error: "Gallery not found or unauthorized" }, { status: 404 });
   }
 
   const selections = await db.getSelectionsByGalleryId(id);
@@ -46,9 +46,9 @@ export async function POST(
   }
 
   const { id } = await params;
-  const gallery = await db.getGalleryById(id);
+  const gallery = await db.getGalleryById(id, user.userId);
   if (!gallery) {
-    return NextResponse.json({ error: "Gallery not found" }, { status: 404 });
+    return NextResponse.json({ error: "Gallery not found or unauthorized" }, { status: 404 });
   }
 
   const body = await request.json().catch(() => ({}));

@@ -84,22 +84,38 @@ class NeonDatabase {
           return;
         }
 
-        // 1. Check/Insert Admin User
-        const admins = await sql`SELECT id FROM admin_users LIMIT 1`;
+        // 1. Check/Insert Admin Users
+        const admins = await sql`SELECT id FROM admin_users WHERE id = 'admin-01' LIMIT 1`;
         if (admins.length === 0) {
-          const passwordHash = bcrypt.hashSync("admin123", 10);
+          const passwordHash1 = bcrypt.hashSync("admin123", 10);
           await sql`
             INSERT INTO admin_users (id, email, name, password_hash, created_at)
-            VALUES (
-              'admin-01', 
-              'admin@studioin.com', 
-              'Studioin Photographer', 
-              ${passwordHash}, 
-              ${new Date().toISOString()}
-            )
+            VALUES ('admin-01', 'admin@studioin.com', 'Studioin Photographer', ${passwordHash1}, ${new Date().toISOString()})
             ON CONFLICT (id) DO NOTHING
           `;
           console.log("[NeonDatabase] Default admin user initialized.");
+        }
+
+        const admin2 = await sql`SELECT id FROM admin_users WHERE id = 'admin-02' LIMIT 1`;
+        if (admin2.length === 0) {
+          const passwordHash2 = bcrypt.hashSync("admin123", 10);
+          await sql`
+            INSERT INTO admin_users (id, email, name, password_hash, created_at)
+            VALUES ('admin-02', 'admin2@studioin.com', 'Admin Studioin 2', ${passwordHash2}, ${new Date().toISOString()})
+            ON CONFLICT (id) DO NOTHING
+          `;
+          console.log("[NeonDatabase] Admin user 2 initialized.");
+        }
+
+        const admin3 = await sql`SELECT id FROM admin_users WHERE id = 'admin-03' LIMIT 1`;
+        if (admin3.length === 0) {
+          const passwordHash3 = bcrypt.hashSync("admin123", 10);
+          await sql`
+            INSERT INTO admin_users (id, email, name, password_hash, created_at)
+            VALUES ('admin-03', 'admin3@studioin.com', 'Admin Studioin 3', ${passwordHash3}, ${new Date().toISOString()})
+            ON CONFLICT (id) DO NOTHING
+          `;
+          console.log("[NeonDatabase] Admin user 3 initialized.");
         }
 
         // 2. Check/Insert Sample Galleries
@@ -117,6 +133,7 @@ class NeonDatabase {
           
           const g1: Gallery = {
             id: "gal-andi-sinta",
+            admin_id: "admin-01",
             client_name: "Andi & Sinta",
             event_name: "Wedding Celebration",
             event_date: "2026-08-20",
@@ -141,6 +158,7 @@ class NeonDatabase {
           const previewDelete2 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
           const g2: Gallery = {
             id: "gal-budi-ayu",
+            admin_id: "admin-01",
             client_name: "Budi & Ayu",
             event_name: "Prewedding Shoot",
             event_date: "2026-08-22",
@@ -165,6 +183,7 @@ class NeonDatabase {
           const previewDelete3 = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000).toISOString();
           const g3: Gallery = {
             id: "gal-komang-putri",
+            admin_id: "admin-01",
             client_name: "Komang & Putri",
             event_name: "Graduation Session",
             event_date: "2026-08-15",
@@ -305,40 +324,68 @@ class NeonDatabase {
   }
 
   // --- Gallery Methods ---
-  async listGalleries(): Promise<Gallery[]> {
+  async listGalleries(adminId?: string): Promise<Gallery[]> {
     await this.ensureInitialized();
     const nowStr = new Date().toISOString();
     
     // Auto expire ready galleries where expires_at has passed
-    await sql`
-      UPDATE galleries 
-      SET status = 'expired', updated_at = ${nowStr}
-      WHERE status = 'ready' AND expires_at < ${nowStr}
-    `;
+    if (adminId) {
+      await sql`
+        UPDATE galleries 
+        SET status = 'expired', updated_at = ${nowStr}
+        WHERE status = 'ready' AND expires_at < ${nowStr} AND admin_id = ${adminId}
+      `;
+    } else {
+      await sql`
+        UPDATE galleries 
+        SET status = 'expired', updated_at = ${nowStr}
+        WHERE status = 'ready' AND expires_at < ${nowStr}
+      `;
+    }
 
-    const rows = await sql`
-      SELECT * FROM galleries 
-      ORDER BY created_at DESC
-    `;
+    const rows = adminId
+      ? await sql`
+          SELECT * FROM galleries 
+          WHERE admin_id = ${adminId}
+          ORDER BY created_at DESC
+        `
+      : await sql`
+          SELECT * FROM galleries 
+          ORDER BY created_at DESC
+        `;
     return rows as Gallery[];
   }
 
-  async getGalleryById(id: string): Promise<Gallery | null> {
+  async getGalleryById(id: string, adminId?: string): Promise<Gallery | null> {
     await this.ensureInitialized();
     const nowStr = new Date().toISOString();
 
     // Auto expire if ready and expires_at has passed
-    await sql`
-      UPDATE galleries 
-      SET status = 'expired', updated_at = ${nowStr}
-      WHERE id = ${id} AND status = 'ready' AND expires_at < ${nowStr}
-    `;
+    if (adminId) {
+      await sql`
+        UPDATE galleries 
+        SET status = 'expired', updated_at = ${nowStr}
+        WHERE id = ${id} AND status = 'ready' AND expires_at < ${nowStr} AND admin_id = ${adminId}
+      `;
+    } else {
+      await sql`
+        UPDATE galleries 
+        SET status = 'expired', updated_at = ${nowStr}
+        WHERE id = ${id} AND status = 'ready' AND expires_at < ${nowStr}
+      `;
+    }
 
-    const rows = await sql`
-      SELECT * FROM galleries 
-      WHERE id = ${id}
-      LIMIT 1
-    `;
+    const rows = adminId
+      ? await sql`
+          SELECT * FROM galleries 
+          WHERE id = ${id} AND admin_id = ${adminId}
+          LIMIT 1
+        `
+      : await sql`
+          SELECT * FROM galleries 
+          WHERE id = ${id}
+          LIMIT 1
+        `;
     if (rows.length === 0) return null;
     return rows[0] as Gallery;
   }
@@ -367,12 +414,12 @@ class NeonDatabase {
     await this.ensureInitialized();
     await sql`
       INSERT INTO galleries (
-        id, client_name, event_name, event_date, drive_folder_id, drive_folder_url,
+        id, admin_id, client_name, event_name, event_date, drive_folder_id, drive_folder_url,
         access_token, pin_hash, pin_code, has_pin, status, total_photos,
         processed_photos, error_message, expires_at, preview_delete_at,
         max_selections, allow_download, created_at, updated_at
       ) VALUES (
-        ${gallery.id}, ${gallery.client_name}, ${gallery.event_name}, ${gallery.event_date},
+        ${gallery.id}, ${gallery.admin_id || null}, ${gallery.client_name}, ${gallery.event_name}, ${gallery.event_date},
         ${gallery.drive_folder_id}, ${gallery.drive_folder_url}, ${gallery.access_token},
         ${gallery.pin_hash}, ${gallery.pin_code || null}, ${gallery.has_pin}, ${gallery.status},
         ${gallery.total_photos}, ${gallery.processed_photos}, ${gallery.error_message || null},
@@ -414,6 +461,7 @@ class NeonDatabase {
         preview_delete_at = ${updated.preview_delete_at},
         max_selections = ${updated.max_selections},
         allow_download = ${updated.allow_download},
+        admin_id = ${updated.admin_id || null},
         updated_at = ${updated.updated_at}
       WHERE id = ${id}
     `;

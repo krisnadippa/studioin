@@ -1,5 +1,6 @@
 export interface Gallery {
   id: string;
+  admin_id?: string | null;
   client_name: string;
   event_name: string;
   event_date: string;

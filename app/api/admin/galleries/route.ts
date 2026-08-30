@@ -9,7 +9,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const galleries = await db.listGalleries();
+  const galleries = await db.listGalleries(user.userId);
   const now = new Date().getTime();
   const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
 
@@ -66,6 +66,7 @@ export async function POST(request: Request) {
     }
 
     const gallery = await GalleryService.createGallery({
+      admin_id: user.userId,
       client_name,
       event_name,
       event_date,

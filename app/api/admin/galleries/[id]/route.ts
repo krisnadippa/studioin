@@ -14,9 +14,9 @@ export async function GET(
   }
 
   const { id } = await params;
-  const gallery = await db.getGalleryById(id);
+  const gallery = await db.getGalleryById(id, user.userId);
   if (!gallery) {
-    return NextResponse.json({ error: "Gallery not found" }, { status: 404 });
+    return NextResponse.json({ error: "Gallery not found or unauthorized" }, { status: 404 });
   }
 
   const photos = await db.getPhotosByGalleryId(id);
@@ -39,6 +39,11 @@ export async function PATCH(
   }
 
   const { id } = await params;
+  const gallery = await db.getGalleryById(id, user.userId);
+  if (!gallery) {
+    return NextResponse.json({ error: "Gallery not found or unauthorized" }, { status: 404 });
+  }
+  
   const body = await request.json().catch(() => ({}));
 
   let updated;
@@ -57,7 +62,7 @@ export async function PATCH(
     if (Object.keys(updates).length > 0) {
       updated = await db.updateGallery(id, updates);
     } else {
-      updated = await db.getGalleryById(id);
+      updated = await db.getGalleryById(id, user.userId);
     }
   }
 
@@ -78,9 +83,14 @@ export async function DELETE(
   }
 
   const { id } = await params;
+  const gallery = await db.getGalleryById(id, user.userId);
+  if (!gallery) {
+    return NextResponse.json({ error: "Gallery not found or unauthorized" }, { status: 404 });
+  }
+  
   const deleted = await GalleryService.deleteGallery(id);
   if (!deleted) {
-    return NextResponse.json({ error: "Gallery not found" }, { status: 404 });
+    return NextResponse.json({ error: "Failed to delete gallery" }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });

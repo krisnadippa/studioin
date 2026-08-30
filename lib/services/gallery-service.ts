@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
 export interface CreateGalleryInput {
+  admin_id: string;
   client_name: string;
   event_name: string;
   event_date: string;
@@ -53,6 +54,7 @@ export class GalleryService {
 
     const newGallery: Gallery = {
       id: galleryId,
+      admin_id: input.admin_id,
       client_name: input.client_name.trim(),
       event_name: input.event_name.trim(),
       event_date: input.event_date || now.toISOString().split("T")[0],
