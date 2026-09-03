@@ -26,6 +26,9 @@ import {
   X,
   Download,
   ZoomIn,
+  Edit3,
+  Loader2,
+  Key,
 } from "lucide-react";
 import { AdminTopNav } from "@/components/admin/AdminTopNav";
 import { GalleryStatusBadge } from "@/components/admin/GalleryStatusBadge";
@@ -45,44 +48,101 @@ export default function GalleryDetailPage({
   const [copied, setCopied] = useState(false);
   const [extending, setExtending] = useState(false);
   
-  // Edit Settings State
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [maxSelections, setMaxSelections] = useState(0);
-  const [allowDownload, setAllowDownload] = useState(false);
-  const [savingSettings, setSavingSettings] = useState(false);
+  // Edit Gallery & Drive Sync Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editClientName, setEditClientName] = useState("");
+  const [editEventName, setEditEventName] = useState("");
+  const [editEventDate, setEditEventDate] = useState("");
+  const [editDriveUrl, setEditDriveUrl] = useState("");
+  const [editPin, setEditPin] = useState("");
+  const [editRemovePin, setEditRemovePin] = useState(false);
+  const [editMaxSelections, setEditMaxSelections] = useState(0);
+  const [editAllowDownload, setEditAllowDownload] = useState(false);
+  const [editResyncDrive, setEditResyncDrive] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [isSyncingDrive, setIsSyncingDrive] = useState(false);
 
-  const openSettings = () => {
+  const openEditModal = () => {
     if (!gallery) return;
-    setMaxSelections(gallery.max_selections || 0);
-    setAllowDownload(!!gallery.allow_download);
-    setIsSettingsOpen(true);
+    setEditClientName(gallery.client_name || "");
+    setEditEventName(gallery.event_name || "");
+    setEditEventDate(gallery.event_date ? gallery.event_date.split("T")[0] : "");
+    setEditDriveUrl(gallery.drive_folder_url || "");
+    setEditPin("");
+    setEditRemovePin(false);
+    setEditMaxSelections(gallery.max_selections || 0);
+    setEditAllowDownload(!!gallery.allow_download);
+    setEditResyncDrive(false);
+    setIsEditModalOpen(true);
   };
 
-  const handleSaveSettings = async (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!gallery) return;
-    setSavingSettings(true);
+    setSavingEdit(true);
     try {
       const res = await fetch(`/api/admin/galleries/${gallery.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          max_selections: maxSelections,
-          allow_download: allowDownload,
+          client_name: editClientName,
+          event_name: editEventName,
+          event_date: editEventDate,
+          drive_folder_url: editDriveUrl,
+          pin: editPin,
+          remove_pin: editRemovePin,
+          max_selections: editMaxSelections,
+          allow_download: editAllowDownload,
+          resync_drive: editResyncDrive,
         }),
       });
+
       if (res.ok) {
         const data = await res.json();
         setGallery(data.gallery);
-        showToast("Settings updated successfully!");
-        setIsSettingsOpen(false);
+        if (data.photos) {
+          setPhotos(data.photos);
+        }
+        showToast("Gallery updated & synchronized successfully!");
+        setIsEditModalOpen(false);
       } else {
-        showToast("Failed to update settings.", "error");
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData.error || "Failed to update gallery.", "error");
       }
     } catch {
-      showToast("An error occurred while updating settings.", "error");
+      showToast("An error occurred while updating gallery.", "error");
     } finally {
-      setSavingSettings(false);
+      setSavingEdit(false);
+    }
+  };
+
+  // Quick Direct Re-sync from Google Drive
+  const handleQuickResync = async () => {
+    if (!gallery) return;
+    setIsSyncingDrive(true);
+    try {
+      const res = await fetch(`/api/admin/galleries/${gallery.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resync_drive: true,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setGallery(data.gallery);
+        if (data.photos) {
+          setPhotos(data.photos);
+        }
+        showToast(`Google Drive synced successfully! (${data.photos?.length || 0} photos)`);
+      } else {
+        showToast("Failed to re-sync photos from Google Drive.", "error");
+      }
+    } catch {
+      showToast("An error occurred while syncing with Google Drive.", "error");
+    } finally {
+      setIsSyncingDrive(false);
     }
   };
 
@@ -281,18 +341,18 @@ export default function GalleryDetailPage({
             <button
               onClick={handleExtend}
               disabled={extending}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-semibold transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-semibold transition-colors cursor-pointer"
             >
               <Clock className="w-3.5 h-3.5 text-zinc-500" />
               <span>{extending ? "Extending..." : "Extend +3 Days"}</span>
             </button>
 
             <button
-              onClick={openSettings}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-semibold transition-colors"
+              onClick={openEditModal}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-800 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
             >
-              <Settings className="w-3.5 h-3.5 text-zinc-500" />
-              <span>Settings</span>
+              <Edit3 className="w-3.5 h-3.5 text-[#114234]" />
+              <span>Edit Gallery</span>
             </button>
 
             <Link
@@ -305,7 +365,7 @@ export default function GalleryDetailPage({
 
             <button
               onClick={handleDelete}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 text-xs font-semibold transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 text-xs font-semibold transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Delete</span>
@@ -332,6 +392,12 @@ export default function GalleryDetailPage({
               <div className="flex justify-between">
                 <span className="text-zinc-400">Total Photos:</span>
                 <span className="font-bold text-zinc-900">{gallery.total_photos.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-400">Event Date:</span>
+                <span className="font-semibold text-zinc-800">
+                  {gallery.event_date ? new Date(gallery.event_date).toLocaleDateString("id-ID", { dateStyle: "long" }) : "-"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-400">Expires At:</span>
@@ -402,9 +468,20 @@ export default function GalleryDetailPage({
 
           {/* Card 3: Google Drive Source Connection */}
           <div className="bg-[#114234] text-white rounded-3xl p-6 shadow-md space-y-4">
-            <span className="text-xs font-bold text-[#bef238] uppercase tracking-wider block">
-              Google Drive Source
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#bef238] uppercase tracking-wider block">
+                Google Drive Source
+              </span>
+              <button
+                onClick={handleQuickResync}
+                disabled={isSyncingDrive}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#bef238] bg-[#0c2f25] hover:bg-[#071f18] px-2.5 py-1 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                title="Sync photos from Drive"
+              >
+                <RefreshCw className={`w-3 h-3 ${isSyncingDrive ? "animate-spin" : ""}`} />
+                <span>{isSyncingDrive ? "Syncing..." : "Sync Now"}</span>
+              </button>
+            </div>
 
             <div className="space-y-1">
               <span className="text-sm font-semibold text-white block truncate">
@@ -432,18 +509,30 @@ export default function GalleryDetailPage({
 
         {/* Photo Gallery Grid Preview */}
         <section className="bg-white rounded-3xl border border-zinc-200/80 p-6 sm:p-8 shadow-xs space-y-6">
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
             <div>
               <h3 className="text-base font-bold text-zinc-950">Photos Preview ({photos.length})</h3>
-              <p className="text-xs text-zinc-500 font-medium">Optimized WebP thumbnails generated from Google Drive</p>
+              <p className="text-xs text-zinc-500 font-medium">Real-time photos synchronized from Google Drive</p>
             </div>
-            <button
-              onClick={fetchGalleryData}
-              className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-900"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh</span>
-            </button>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleQuickResync}
+                disabled={isSyncingDrive}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#114234] hover:bg-[#0d3429] text-[#bef238] text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingDrive ? "animate-spin" : ""}`} />
+                <span>{isSyncingDrive ? "Syncing Drive..." : "Re-sync from Drive"}</span>
+              </button>
+
+              <button
+                onClick={fetchGalleryData}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 text-xs text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 transition-colors cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Refresh</span>
+              </button>
+            </div>
           </div>
 
           {photos.length === 0 ? (
@@ -604,55 +693,182 @@ export default function GalleryDetailPage({
         </div>
       )}
 
-      {/* Settings Edit Modal */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+      {/* Full Edit Gallery & Google Drive Sync Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
           <form
-            onSubmit={handleSaveSettings}
-            className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-zinc-100/80 flex flex-col space-y-4 animate-scaleUp"
+            onSubmit={handleSaveEdit}
+            className="bg-white rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl border border-zinc-100 flex flex-col space-y-5 animate-scaleUp my-8 max-h-[90vh] overflow-y-auto"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-zinc-50 text-zinc-700">
-                <Settings className="w-5 h-5" />
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-[#114234]/10 text-[#114234]">
+                  <Edit3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-950">Edit Gallery Details</h3>
+                  <p className="text-xs text-zinc-400">Update info & synchronize with Google Drive</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-zinc-950">Gallery Settings</h3>
-                <p className="text-xs text-zinc-400">Modify client preferences</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-2 rounded-xl text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="space-y-4 pt-2">
-              {/* Max Selections */}
+            <div className="space-y-4 pt-1 text-xs">
+              {/* Client Name */}
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                <label className="block font-semibold text-zinc-700 mb-1">
+                  Client Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editClientName}
+                  onChange={(e) => setEditClientName(e.target.value)}
+                  placeholder="e.g. Andi & Sinta"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-950 focus:outline-none focus:border-[#114234] focus:ring-1 focus:ring-[#114234]"
+                />
+              </div>
+
+              {/* Event Name & Date Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-zinc-700 mb-1">
+                    Event / Session Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editEventName}
+                    onChange={(e) => setEditEventName(e.target.value)}
+                    placeholder="e.g. Prewedding Photoshoot"
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-950 focus:outline-none focus:border-[#114234] focus:ring-1 focus:ring-[#114234]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-zinc-700 mb-1">
+                    Event Date
+                  </label>
+                  <input
+                    type="date"
+                    value={editEventDate}
+                    onChange={(e) => setEditEventDate(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-950 focus:outline-none focus:border-[#114234] focus:ring-1 focus:ring-[#114234]"
+                  />
+                </div>
+              </div>
+
+              {/* Google Drive Link */}
+              <div>
+                <label className="block font-semibold text-zinc-700 mb-1 flex items-center justify-between">
+                  <span>Google Drive Folder Link / ID</span>
+                  <span className="text-[10px] text-zinc-400 font-normal">Pastikan akses link "Anyone with the link"</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={editDriveUrl}
+                    onChange={(e) => {
+                      setEditDriveUrl(e.target.value);
+                      setEditResyncDrive(true);
+                    }}
+                    placeholder="https://drive.google.com/drive/folders/..."
+                    className="w-full pl-9 pr-3.5 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-mono text-zinc-950 focus:outline-none focus:border-[#114234] focus:ring-1 focus:ring-[#114234]"
+                  />
+                  <FolderOpen className="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+                </div>
+                <p className="text-[10px] text-zinc-400 mt-1">
+                  Mengubah link Google Drive akan otomatis memindai dan memperbarui seluruh daftar foto galeri.
+                </p>
+              </div>
+
+              {/* Re-sync Checkbox */}
+              <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200/60 flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-[#114234] block">Re-sync Google Drive Photos</span>
+                  <span className="text-[10px] text-emerald-800/80 block">
+                    Pindai ulang dan perbarui foto galeri dari Google Drive saat menyimpan.
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={editResyncDrive}
+                  onChange={(e) => setEditResyncDrive(e.target.checked)}
+                  className="w-4 h-4 text-[#114234] rounded focus:ring-[#114234] cursor-pointer"
+                />
+              </div>
+
+              {/* PIN Settings */}
+              <div>
+                <label className="block font-semibold text-zinc-700 mb-1 flex items-center justify-between">
+                  <span>Client Access PIN</span>
+                  {gallery?.has_pin && (
+                    <span className="text-[10px] text-emerald-600 font-semibold">Saat ini memiliki PIN</span>
+                  )}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={editPin}
+                    disabled={editRemovePin}
+                    onChange={(e) => setEditPin(e.target.value)}
+                    placeholder={gallery?.has_pin ? "Kosongkan jika tidak ingin mengubah PIN" : "Misal: 1234 (Opsional)"}
+                    className="w-full pl-9 pr-3.5 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-mono text-zinc-950 focus:outline-none focus:border-[#114234] focus:ring-1 focus:ring-[#114234] disabled:opacity-50"
+                  />
+                  <Key className="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+                </div>
+                {gallery?.has_pin && (
+                  <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editRemovePin}
+                      onChange={(e) => setEditRemovePin(e.target.checked)}
+                      className="w-3.5 h-3.5 text-red-600 rounded focus:ring-red-500"
+                    />
+                    <span className="text-[11px] text-red-600 font-medium">Hapus PIN (Jadikan Galeri Publik)</span>
+                  </label>
+                )}
+              </div>
+
+              {/* Selection Limit */}
+              <div>
+                <label className="block font-semibold text-zinc-700 mb-1">
                   Selection Limit (Max Photos)
                 </label>
                 <input
                   type="number"
                   min={0}
-                  value={maxSelections}
-                  onChange={(e) => setMaxSelections(Math.max(0, parseInt(e.target.value) || 0))}
-                  placeholder="e.g. 10 (0 for unlimited)"
-                  className="w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-950 focus:outline-none focus:border-[#114234] focus:ring-1 focus:ring-[#114234]"
+                  value={editMaxSelections}
+                  onChange={(e) => setEditMaxSelections(Math.max(0, parseInt(e.target.value) || 0))}
+                  placeholder="e.g. 10 (0 untuk tanpa batas)"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-950 focus:outline-none focus:border-[#114234] focus:ring-1 focus:ring-[#114234]"
                 />
                 <span className="text-[10px] text-zinc-400 mt-1 block">
-                  Set to 0 if the client has no limit on selections.
+                  Isi 0 jika klien bebas memilih foto tanpa batasan kuota.
                 </span>
               </div>
 
               {/* Allow Downloads Checkbox */}
               <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-xl border border-zinc-200/60">
                 <div className="space-y-0.5">
-                  <span className="text-xs font-bold text-zinc-950 block">Allow Downloads</span>
+                  <span className="text-xs font-bold text-zinc-950 block">Allow Original HD Downloads</span>
                   <span className="text-[10px] text-zinc-400 block">
-                    Clients can download original HD photos.
+                    Klien dapat langsung mengunduh file foto resolusi penuh.
                   </span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={allowDownload}
-                    onChange={(e) => setAllowDownload(e.target.checked)}
+                    checked={editAllowDownload}
+                    onChange={(e) => setEditAllowDownload(e.target.checked)}
                     className="sr-only peer"
                   />
                   <div className="w-9 h-5 bg-zinc-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#114234]"></div>
@@ -660,20 +876,31 @@ export default function GalleryDetailPage({
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-zinc-100">
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-zinc-100">
               <button
                 type="button"
-                onClick={() => setIsSettingsOpen(false)}
+                onClick={() => setIsEditModalOpen(false)}
                 className="px-4 py-2 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={savingSettings}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#114234] hover:bg-[#0d3429] transition-all shadow-md active:scale-98 cursor-pointer disabled:opacity-50"
+                disabled={savingEdit}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#114234] hover:bg-[#0d3429] transition-all shadow-md active:scale-98 cursor-pointer disabled:opacity-50"
               >
-                {savingSettings ? "Saving..." : "Save Settings"}
+                {savingEdit ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Menyimpan & Menyinkronkan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Save Changes</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

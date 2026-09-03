@@ -133,7 +133,7 @@ export class GalleryService {
         });
       }
 
-      await db.addPhotos(galleryId, photos);
+      await db.replacePhotos(galleryId, photos);
 
       await db.updateGallery(galleryId, {
         status: "ready",

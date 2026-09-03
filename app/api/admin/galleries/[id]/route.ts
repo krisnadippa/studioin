@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { AuthService } from "@/lib/services/auth-service";
 import { GalleryService } from "@/lib/services/gallery-service";
+import { googleDriveService } from "@/lib/services/google-drive";
 import { db } from "@/lib/db/store";
 import { Gallery } from "@/lib/db/types";
+import bcrypt from "bcryptjs";
 
 export async function GET(
   request: Request,
@@ -52,6 +54,38 @@ export async function PATCH(
     updated = await GalleryService.extendGallery(id, additionalDays);
   } else {
     const updates: Partial<Gallery> = {};
+
+    if (body.client_name !== undefined && body.client_name.trim() !== "") {
+      updates.client_name = body.client_name.trim();
+    }
+    if (body.event_name !== undefined && body.event_name.trim() !== "") {
+      updates.event_name = body.event_name.trim();
+    }
+    if (body.event_date !== undefined && body.event_date.trim() !== "") {
+      updates.event_date = body.event_date.trim();
+    }
+
+    let shouldResyncDrive = !!body.resync_drive;
+    let targetFolderId = gallery.drive_folder_id;
+
+    if (body.drive_folder_url !== undefined && body.drive_folder_url.trim() !== "") {
+      const extractedId = googleDriveService.parseFolderId(body.drive_folder_url.trim());
+      if (extractedId) {
+        updates.drive_folder_id = extractedId;
+        updates.drive_folder_url = body.drive_folder_url.trim();
+        targetFolderId = extractedId;
+        shouldResyncDrive = true;
+      }
+    }
+
+    if (body.pin !== undefined) {
+      if (body.pin.trim() !== "") {
+        updates.pin_hash = await bcrypt.hash(body.pin.trim(), 10);
+      } else if (body.remove_pin === true) {
+        updates.pin_hash = null;
+      }
+    }
+
     if (body.max_selections !== undefined) {
       updates.max_selections = Number(body.max_selections) || 0;
     }
@@ -64,13 +98,25 @@ export async function PATCH(
     } else {
       updated = await db.getGalleryById(id, user.userId);
     }
+
+    // If Google Drive link changed or resync explicitly requested, process photos
+    if (shouldResyncDrive && targetFolderId) {
+      try {
+        await GalleryService.processGalleryInBackground(id, targetFolderId);
+        updated = await db.getGalleryById(id, user.userId);
+      } catch (err) {
+        console.error("[Gallery Resync Error]", err);
+      }
+    }
   }
 
   if (!updated) {
     return NextResponse.json({ error: "Gallery not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ success: true, gallery: updated });
+  const freshPhotos = await db.getPhotosByGalleryId(id);
+
+  return NextResponse.json({ success: true, gallery: updated, photos: freshPhotos });
 }
 
 export async function DELETE(

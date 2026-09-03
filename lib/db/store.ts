@@ -563,6 +563,15 @@ class NeonDatabase {
     return this.getPhotosByGalleryId(galleryId);
   }
 
+  async replacePhotos(galleryId: string, newPhotos: Photo[]): Promise<Photo[]> {
+    await this.ensureInitialized();
+    await sql`
+      DELETE FROM photos
+      WHERE gallery_id = ${galleryId}
+    `;
+    return this.addPhotos(galleryId, newPhotos);
+  }
+
   // --- Selection Methods ---
   async getSelectionsByGalleryId(galleryId: string): Promise<Selection[]> {
     await this.ensureInitialized();
