@@ -486,24 +486,24 @@ class NeonDatabase {
       ORDER BY sort_order ASC
     `;
     return (rows as Photo[]).map((p) => {
-      let thumb = p.thumbnail_url;
-      let prev = p.preview_url;
+      let thumb = p.thumbnail_url || "";
+      let prev = p.preview_url || "";
 
-      const isMock =
-        !p.drive_file_id ||
-        p.drive_file_id.startsWith("drive-") ||
-        p.drive_file_id.startsWith("drive_file_") ||
-        (thumb && thumb.includes("images.unsplash.com"));
-
-      if (!isMock) {
-        thumb = `/api/photo/${p.id}`;
-        prev = `/api/photo/${p.id}`;
+      if (thumb.includes("googleusercontent.com/drive-storage")) {
+        thumb = thumb.replace(/=([ws])?\d+/, "=s800");
+        if (prev.includes("googleusercontent.com/drive-storage")) {
+          prev = prev.replace(/=([ws])?\d+/, "=s1600");
+        }
+      } else if (thumb.includes("lh3.googleusercontent.com/d/")) {
+        const driveId = p.drive_file_id || p.id.split("-").pop();
+        thumb = `https://drive.google.com/thumbnail?id=${driveId}&sz=w800`;
+        prev = `https://drive.google.com/thumbnail?id=${driveId}&sz=w1600`;
       }
 
       return {
         ...p,
-        thumbnail_url: thumb,
-        preview_url: prev,
+        thumbnail_url: thumb || `/api/photo/${p.id}`,
+        preview_url: prev || thumb || `/api/photo/${p.id}`,
       };
     });
   }
