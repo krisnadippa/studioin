@@ -84,6 +84,9 @@ export default function NewGalleryPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (res.status === 401 || data.error === "Unauthorized") {
+          throw new Error("UNAUTHORIZED_SESSION");
+        }
         throw new Error(data.error || "Failed to create gallery");
       }
 
@@ -135,12 +138,30 @@ export default function NewGalleryPage() {
         </div>
 
         {error && (
-          <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs sm:text-sm flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 shrink-0 text-red-600 mt-0.5" />
-            <div>
-              <span className="font-bold block mb-0.5">Unable to process this gallery:</span>
-              <span className="text-red-700 block">{error}</span>
+          <div className="p-4 sm:p-5 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 shrink-0 text-red-600 mt-0.5" />
+              <div>
+                <span className="font-bold block mb-0.5">
+                  {error === "UNAUTHORIZED_SESSION" || error === "Unauthorized"
+                    ? "Sesi Admin Berakhir (Unauthorized)"
+                    : "Unable to process this gallery:"}
+                </span>
+                <span className="text-red-700 block">
+                  {error === "UNAUTHORIZED_SESSION" || error === "Unauthorized"
+                    ? "Sesi login admin Anda telah berakhir atau tidak terdeteksi. Silakan login kembali ke akun admin."
+                    : error}
+                </span>
+              </div>
             </div>
+            {(error === "UNAUTHORIZED_SESSION" || error === "Unauthorized") && (
+              <Link
+                href="/admin/login"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 text-center"
+              >
+                Login Admin Kembali
+              </Link>
+            )}
           </div>
         )}
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, use, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { GalleryImage } from "@/components/gallery/GalleryImage";
 import {
   Check,
   ChevronLeft,
@@ -49,6 +50,18 @@ interface PublicPhoto {
 // Helper to convert size parameter to a high-definition 2048px (2K) format
 const getHDPreviewUrl = (url: string) => {
   if (!url) return url;
+  if (url.startsWith("/api/photo/")) {
+    return url;
+  }
+  if (url.includes("lh3.googleusercontent.com/d/")) {
+    const match = url.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w2048`;
+    }
+  }
+  if (url.includes("drive.google.com/thumbnail")) {
+    return url.replace(/sz=w\d+/, "sz=w2048");
+  }
   if (url.includes("images.unsplash.com")) {
     return url.replace("w=500", "w=2048").replace("w=1600", "w=2048");
   }
@@ -138,16 +151,31 @@ export default function ClientGalleryPage({
       setPhotos(data.photos || []);
       setRequiresPin(false);
 
-      // Restore saved local selections if available
-      try {
-        const saved = localStorage.getItem(`studioin_sel_${data.gallery.id}`);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            setSelectedIds(new Set(parsed));
-          }
+      // Restore selections: sync from database selection if available
+      if (data.latest_selection && Array.isArray(data.latest_selection.selected_photo_ids)) {
+        const dbSelected = data.latest_selection.selected_photo_ids;
+        setSelectedIds(new Set(dbSelected));
+        if (data.latest_selection.client_notes) {
+          setClientNotes(data.latest_selection.client_notes);
         }
-      } catch {}
+        if (data.latest_selection.client_email) {
+          setClientEmail(data.latest_selection.client_email);
+        }
+        try {
+          localStorage.setItem(`studioin_sel_${data.gallery.id}`, JSON.stringify(dbSelected));
+        } catch {}
+      } else {
+        // Fallback to local storage if no DB selection exists yet
+        try {
+          const saved = localStorage.getItem(`studioin_sel_${data.gallery.id}`);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+              setSelectedIds(new Set(parsed));
+            }
+          }
+        } catch {}
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load gallery";
       setError(msg);
@@ -355,6 +383,7 @@ export default function ClientGalleryPage({
 
       setSubmitted(true);
       setShowSubmitModal(false);
+      fetchGallery();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Submission error");
     } finally {
@@ -728,14 +757,13 @@ export default function ClientGalleryPage({
                       : "border-transparent hover:border-zinc-300 shadow-xs"
                   }`}
                 >
-                  <Image
+                  <GalleryImage
                     src={photo.thumbnail_url}
                     alt={photo.filename}
                     fill
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                     className="object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
-                    loading="lazy"
-                    unoptimized
+                    index={index}
                   />
 
                   {/* Gradient bottom overlay */}
@@ -894,13 +922,13 @@ export default function ClientGalleryPage({
 
             {/* Main Preview Image */}
             <div className="relative w-full h-full max-h-[82vh] flex items-center justify-center">
-              <Image
+              <GalleryImage
                 src={getHDPreviewUrl(filteredPhotos[lightboxIndex].preview_url)}
                 alt={filteredPhotos[lightboxIndex].filename}
                 fill
                 priority
-                unoptimized
                 className="object-contain"
+                index={lightboxIndex}
               />
             </div>
 

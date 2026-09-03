@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { GalleryImage } from "@/components/gallery/GalleryImage";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -20,6 +21,11 @@ import {
   CheckCircle2,
   AlertCircle,
   Settings,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Download,
+  ZoomIn,
 } from "lucide-react";
 import { AdminTopNav } from "@/components/admin/AdminTopNav";
 import { GalleryStatusBadge } from "@/components/admin/GalleryStatusBadge";
@@ -131,6 +137,25 @@ export default function GalleryDetailPage({
       setLoading(false);
     }
   };
+
+  // Lightbox State
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // Keyboard navigation for Lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (lightboxIndex === null) return;
+      if (e.key === "Escape") setLightboxIndex(null);
+      if (e.key === "ArrowLeft") {
+        setLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : photos.length - 1));
+      }
+      if (e.key === "ArrowRight") {
+        setLightboxIndex((prev) => (prev !== null && prev < photos.length - 1 ? prev + 1 : 0));
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lightboxIndex, photos.length]);
 
   useEffect(() => {
     fetchGalleryData();
@@ -427,19 +452,25 @@ export default function GalleryDetailPage({
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {photos.map((photo) => (
+              {photos.map((photo, index) => (
                 <div
                   key={photo.id}
-                  className="group relative aspect-[4/3] rounded-xl overflow-hidden bg-zinc-100 border border-zinc-200/60 shadow-xs"
+                  onClick={() => setLightboxIndex(index)}
+                  className="group relative aspect-[4/3] rounded-xl overflow-hidden bg-zinc-100 border border-zinc-200/60 shadow-xs cursor-pointer hover:border-[#114234] hover:shadow-md transition-all duration-200"
                 >
-                  <Image
+                  <GalleryImage
                     src={photo.thumbnail_url}
                     alt={photo.filename}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    unoptimized
+                    index={index}
                   />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="p-2 bg-white/20 backdrop-blur-xs rounded-full text-white">
+                      <ZoomIn className="w-5 h-5" />
+                    </div>
+                  </div>
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white text-[10px] font-mono truncate">
                     {photo.filename}
                   </div>
@@ -450,6 +481,84 @@ export default function GalleryDetailPage({
         </section>
 
       </main>
+
+      {/* Admin Fullscreen Lightbox Modal */}
+      {lightboxIndex !== null && photos[lightboxIndex] && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex flex-col justify-between select-none animate-fadeIn">
+          {/* Lightbox Header Bar */}
+          <div className="flex items-center justify-between p-4 sm:p-6 bg-gradient-to-b from-black/80 to-transparent z-10">
+            <div className="flex items-center gap-2 sm:gap-3 font-mono text-xs text-zinc-300 min-w-0">
+              <span className="truncate max-w-[160px] sm:max-w-[300px] font-bold text-white" title={photos[lightboxIndex].filename}>
+                {photos[lightboxIndex].filename}
+              </span>
+              <span className="text-zinc-600 shrink-0">•</span>
+              <span className="shrink-0 text-zinc-400">
+                {lightboxIndex + 1} of {photos.length}
+              </span>
+            </div>
+
+            {/* Right Controls */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <a
+                href={`/api/admin/galleries/${id}/download/${photos[lightboxIndex].id}`}
+                download
+                className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+                title="Download HD photo"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Download HD</span>
+              </a>
+
+              <button
+                onClick={() => setLightboxIndex(null)}
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                aria-label="Close lightbox"
+                title="Close Lightbox"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Lightbox Center Image View */}
+          <div className="relative flex-1 flex items-center justify-center p-4 sm:p-8">
+            {/* Previous Button */}
+            <button
+              onClick={() => setLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : photos.length - 1))}
+              className="absolute left-4 p-3 rounded-full bg-black/50 hover:bg-black/80 text-white border border-white/10 transition-colors z-20 cursor-pointer"
+              aria-label="Previous photo"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+
+            {/* Main Preview Image */}
+            <div className="relative w-full h-full max-h-[82vh] flex items-center justify-center">
+              <GalleryImage
+                src={photos[lightboxIndex].preview_url}
+                alt={photos[lightboxIndex].filename}
+                fill
+                priority
+                className="object-contain"
+                index={lightboxIndex}
+              />
+            </div>
+
+            {/* Next Button */}
+            <button
+              onClick={() => setLightboxIndex((prev) => (prev !== null && prev < photos.length - 1 ? prev + 1 : 0))}
+              className="absolute right-4 p-3 rounded-full bg-black/50 hover:bg-black/80 text-white border border-white/10 transition-colors z-20 cursor-pointer"
+              aria-label="Next photo"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Lightbox Bottom Info Bar */}
+          <div className="p-4 text-center text-[11px] text-zinc-500">
+            Use Left / Right arrow keys to navigate • Esc to close
+          </div>
+        </div>
+      )}
 
       {/* Custom Confirmation Modal */}
       {confirmModal && confirmModal.isOpen && (

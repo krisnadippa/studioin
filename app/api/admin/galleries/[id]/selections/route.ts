@@ -96,3 +96,46 @@ export async function POST(
     },
   });
 }
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await AuthService.getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const gallery = await db.getGalleryById(id, user.userId);
+  if (!gallery) {
+    return NextResponse.json({ error: "Gallery not found or unauthorized" }, { status: 404 });
+  }
+
+  try {
+    const body = await request.json();
+    const { selected_photo_ids } = body;
+
+    if (!Array.isArray(selected_photo_ids)) {
+      return NextResponse.json({ error: "Invalid selected_photo_ids array." }, { status: 400 });
+    }
+
+    await db.updateSelectionsByGalleryId(id, selected_photo_ids);
+    const selections = await db.getSelectionsByGalleryId(id);
+    const allPhotos = await db.getPhotosByGalleryId(id);
+
+    const selectedSet = new Set(selected_photo_ids);
+    const selectedPhotos = allPhotos.filter((p) => selectedSet.has(p.id));
+
+    return NextResponse.json({
+      success: true,
+      gallery,
+      selections,
+      selected_photos: selectedPhotos,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to update selection";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+

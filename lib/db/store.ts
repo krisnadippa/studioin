@@ -478,7 +478,6 @@ class NeonDatabase {
     return true;
   }
 
-  // --- Photo Methods ---
   async getPhotosByGalleryId(galleryId: string): Promise<Photo[]> {
     await this.ensureInitialized();
     const rows = await sql`
@@ -486,7 +485,38 @@ class NeonDatabase {
       WHERE gallery_id = ${galleryId}
       ORDER BY sort_order ASC
     `;
-    return rows as Photo[];
+    return (rows as Photo[]).map((p) => {
+      let thumb = p.thumbnail_url;
+      let prev = p.preview_url;
+
+      const isMock =
+        !p.drive_file_id ||
+        p.drive_file_id.startsWith("drive-") ||
+        p.drive_file_id.startsWith("drive_file_") ||
+        (thumb && thumb.includes("images.unsplash.com"));
+
+      if (!isMock) {
+        thumb = `/api/photo/${p.id}`;
+        prev = `/api/photo/${p.id}`;
+      }
+
+      return {
+        ...p,
+        thumbnail_url: thumb,
+        preview_url: prev,
+      };
+    });
+  }
+
+  async getPhotoById(photoId: string): Promise<Photo | null> {
+    await this.ensureInitialized();
+    const rows = await sql`
+      SELECT * FROM photos
+      WHERE id = ${photoId}
+      LIMIT 1
+    `;
+    if (rows.length === 0) return null;
+    return rows[0] as Photo;
   }
 
   async addPhotos(galleryId: string, newPhotos: Photo[]): Promise<Photo[]> {
@@ -560,18 +590,97 @@ class NeonDatabase {
     await this.ensureInitialized();
     const selectedPhotoIdsJson = JSON.stringify(selection.selected_photo_ids);
     
-    await sql`
-      INSERT INTO selections (
-        id, gallery_id, client_name, client_email, client_notes,
-        submitted_at, status, selected_photo_ids, created_at
-      ) VALUES (
-        ${selection.id}, ${selection.gallery_id}, ${selection.client_name},
-        ${selection.client_email || null}, ${selection.client_notes || null},
-        ${selection.submitted_at}, ${selection.status}, ${selectedPhotoIdsJson},
-        ${selection.created_at}
-      )
-    `;
+    try {
+      await sql`
+        INSERT INTO selections (
+          id, gallery_id, client_name, client_email, client_notes,
+          submitted_at, status, selected_photo_ids, created_at
+        ) VALUES (
+          ${selection.id}, ${selection.gallery_id}, ${selection.client_name},
+          ${selection.client_email || null}, ${selection.client_notes || null},
+          ${selection.submitted_at}, ${selection.status}, ${selectedPhotoIdsJson}::jsonb,
+          ${selection.created_at}
+        )
+      `;
+    } catch {
+      await sql`
+        INSERT INTO selections (
+          id, gallery_id, client_name, client_email, client_notes,
+          submitted_at, status, selected_photo_ids, created_at
+        ) VALUES (
+          ${selection.id}, ${selection.gallery_id}, ${selection.client_name},
+          ${selection.client_email || null}, ${selection.client_notes || null},
+          ${selection.submitted_at}, ${selection.status}, ${selectedPhotoIdsJson},
+          ${selection.created_at}
+        )
+      `;
+    }
     return selection;
+  }
+
+  async updateSelectionsByGalleryId(
+    galleryId: string,
+    selectedPhotoIds: string[],
+    clientInfo?: { client_name?: string; client_email?: string; client_notes?: string }
+  ): Promise<Selection> {
+    await this.ensureInitialized();
+    const existing = await this.getSelectionsByGalleryId(galleryId);
+    const selectedPhotoIdsJson = JSON.stringify(selectedPhotoIds);
+    const nowStr = new Date().toISOString();
+
+    if (existing.length > 0) {
+      const target = existing[0];
+      const updatedClientName = clientInfo?.client_name || target.client_name;
+      const updatedEmail = clientInfo?.client_email !== undefined ? clientInfo.client_email : target.client_email;
+      const updatedNotes = clientInfo?.client_notes !== undefined ? clientInfo.client_notes : target.client_notes;
+
+      try {
+        await sql`
+          UPDATE selections
+          SET
+            client_name = ${updatedClientName},
+            client_email = ${updatedEmail || null},
+            client_notes = ${updatedNotes || null},
+            submitted_at = ${nowStr},
+            selected_photo_ids = ${selectedPhotoIdsJson}::jsonb
+          WHERE id = ${target.id}
+        `;
+      } catch {
+        await sql`
+          UPDATE selections
+          SET
+            client_name = ${updatedClientName},
+            client_email = ${updatedEmail || null},
+            client_notes = ${updatedNotes || null},
+            submitted_at = ${nowStr},
+            selected_photo_ids = ${selectedPhotoIdsJson}
+          WHERE id = ${target.id}
+        `;
+      }
+
+      return {
+        ...target,
+        client_name: updatedClientName,
+        client_email: updatedEmail,
+        client_notes: updatedNotes,
+        submitted_at: nowStr,
+        selected_photo_ids: selectedPhotoIds,
+      };
+    } else {
+      const gallery = await this.getGalleryById(galleryId);
+      const newSelection: Selection = {
+        id: `sel-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        gallery_id: galleryId,
+        client_name: clientInfo?.client_name || gallery?.client_name || "Client",
+        client_email: clientInfo?.client_email,
+        client_notes: clientInfo?.client_notes,
+        submitted_at: nowStr,
+        status: "submitted",
+        selected_photo_ids: selectedPhotoIds,
+        created_at: nowStr,
+      };
+      return this.createSelection(newSelection);
+    }
   }
 }
 

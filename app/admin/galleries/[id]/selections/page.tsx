@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { GalleryImage } from "@/components/gallery/GalleryImage";
 import {
   ArrowLeft,
   Download,
@@ -15,6 +16,15 @@ import {
   Calendar,
   MessageSquare,
   Loader2,
+  Trash2,
+  Plus,
+  X,
+  Search,
+  CheckCircle2,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
 } from "lucide-react";
 import JSZip from "jszip";
 import { AdminTopNav } from "@/components/admin/AdminTopNav";
@@ -29,8 +39,39 @@ export default function GallerySelectionsPage({
   const [gallery, setGallery] = useState<Gallery | null>(null);
   const [selections, setSelections] = useState<Selection[]>([]);
   const [selectedPhotos, setSelectedPhotos] = useState<Photo[]>([]);
+  const [allPhotos, setAllPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [copiedFilenames, setCopiedFilenames] = useState(false);
+
+  // Lightbox State
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // Keyboard navigation for Lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (lightboxIndex === null) return;
+      if (e.key === "Escape") setLightboxIndex(null);
+      if (e.key === "ArrowLeft") {
+        setLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : selectedPhotos.length - 1));
+      }
+      if (e.key === "ArrowRight") {
+        setLightboxIndex((prev) => (prev !== null && prev < selectedPhotos.length - 1 ? prev + 1 : 0));
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lightboxIndex, selectedPhotos.length]);
+
+  // Manage Selections Modal State
+  const [showManageModal, setShowManageModal] = useState(false);
+  const [draftSelectedIds, setDraftSelectedIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [manageFilter, setManageFilter] = useState<"all" | "selected">("all");
+
+  // Toast Notification State
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
   const [zipProgress, setZipProgress] = useState<{
     isActive: boolean;
     total: number;
@@ -39,26 +80,98 @@ export default function GallerySelectionsPage({
     filename: string;
   } | null>(null);
 
-  useEffect(() => {
-    const fetchSelections = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(`/api/admin/galleries/${id}/selections`);
-        if (res.ok) {
-          const data = await res.json();
-          setGallery(data.gallery);
-          setSelections(data.selections || []);
-          setSelectedPhotos(data.selected_photos || []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch selections:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
-    fetchSelections();
+  const fetchSelectionsData = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/admin/galleries/${id}/selections`);
+      const galleryRes = await fetch(`/api/admin/galleries/${id}`);
+
+      if (res.ok) {
+        const data = await res.json();
+        setGallery(data.gallery);
+        setSelections(data.selections || []);
+        setSelectedPhotos(data.selected_photos || []);
+      }
+
+      if (galleryRes.ok) {
+        const gData = await galleryRes.json();
+        setAllPhotos(gData.photos || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch selections:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSelectionsData();
   }, [id]);
+
+  const updateSelectionsOnServer = async (newSelectedPhotoIds: string[]) => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/galleries/${id}/selections`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ selected_photo_ids: newSelectedPhotoIds }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update selections.");
+      }
+
+      setSelections(data.selections || []);
+      setSelectedPhotos(data.selected_photos || []);
+      showToast("Selections updated successfully!");
+      return true;
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Error updating selection", "error");
+      // Re-fetch to restore state to prevent corrupted view
+      fetchSelectionsData();
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemovePhoto = async (photoId: string) => {
+    const updatedIds = selectedPhotos.filter((p) => p.id !== photoId).map((p) => p.id);
+    await updateSelectionsOnServer(updatedIds);
+  };
+
+  const openManageModal = () => {
+    setDraftSelectedIds(new Set(selectedPhotos.map((p) => p.id)));
+    setSearchQuery("");
+    setManageFilter("all");
+    setShowManageModal(true);
+  };
+
+  const toggleDraftPhoto = (photoId: string) => {
+    setDraftSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(photoId)) {
+        next.delete(photoId);
+      } else {
+        next.add(photoId);
+      }
+      return next;
+    });
+  };
+
+  const handleSaveManageSelections = async () => {
+    const success = await updateSelectionsOnServer(Array.from(draftSelectedIds));
+    if (success) {
+      setShowManageModal(false);
+    }
+  };
 
   const handleExport = async (format: "txt" | "csv" | "json") => {
     try {
@@ -150,6 +263,18 @@ export default function GallerySelectionsPage({
     }
   };
 
+  const filteredManagePhotos = useMemo(() => {
+    let list = allPhotos;
+    if (manageFilter === "selected") {
+      list = list.filter((p) => draftSelectedIds.has(p.id));
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((p) => p.filename.toLowerCase().includes(q));
+    }
+    return list;
+  }, [allPhotos, manageFilter, draftSelectedIds, searchQuery]);
+
   if (loading) {
     return (
       <div className="flex-1 flex flex-col p-8 space-y-6">
@@ -196,12 +321,20 @@ export default function GallerySelectionsPage({
             <span>Back to Gallery Details</span>
           </Link>
 
-          {/* Export Buttons */}
+          {/* Export & Manage Buttons */}
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={openManageModal}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#114234] hover:bg-[#0d3429] text-[#bef238] text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Select / Manage Photos</span>
+            </button>
+
             <button
               onClick={downloadAllSelected}
               disabled={selectedPhotos.length === 0}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#114234] hover:bg-[#0d3429] text-[#bef238] text-xs font-bold transition-all disabled:opacity-50 shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-semibold transition-colors disabled:opacity-50"
               title="Download all selected photos in original HD format"
             >
               <Download className="w-3.5 h-3.5" />
@@ -288,41 +421,63 @@ export default function GallerySelectionsPage({
           <div className="bg-white rounded-3xl border border-zinc-200/80 p-8 text-center text-zinc-500">
             <CheckSquare className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
             <h3 className="text-sm font-bold text-zinc-800">No selections submitted yet</h3>
-            <p className="text-xs text-zinc-400 max-w-sm mx-auto mt-1">
-              The client has not finalized or submitted their photo choices yet.
+            <p className="text-xs text-zinc-400 max-w-sm mx-auto mt-1 mb-4">
+              The client has not finalized or submitted their photo choices yet. You can pre-select photos for the client using the button below.
             </p>
+            <button
+              onClick={openManageModal}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#114234] text-[#bef238] text-xs font-bold rounded-xl"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Select Photos for Client</span>
+            </button>
           </div>
         )}
 
         {/* Selected Photos Grid */}
         <section className="bg-white rounded-3xl border border-zinc-200/80 p-6 sm:p-8 shadow-xs space-y-6">
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-100 pb-4 gap-4">
             <div>
               <h3 className="text-base font-bold text-zinc-950">Selected Photos List ({selectedPhotos.length})</h3>
               <p className="text-xs text-zinc-500 font-medium">
-                Copy or export the list of filenames to locate original RAW / JPEG files in your Google Drive.
+                Manage, remove, or export photos selected by the client.
               </p>
             </div>
+            
+            <button
+              onClick={openManageModal}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-800 text-xs font-bold transition-colors cursor-pointer self-start sm:self-auto"
+            >
+              <Plus className="w-3.5 h-3.5 text-[#114234]" />
+              <span>Add / Remove Photos</span>
+            </button>
           </div>
 
           {selectedPhotos.length === 0 ? (
-            <div className="p-12 text-center text-zinc-400 text-xs">
-              No photos currently selected.
+            <div className="p-12 text-center text-zinc-400 text-xs space-y-3">
+              <p>No photos currently selected.</p>
+              <button
+                onClick={openManageModal}
+                className="px-4 py-2 rounded-xl bg-[#114234] text-[#bef238] font-bold text-xs"
+              >
+                Choose Photos from Gallery
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {selectedPhotos.map((photo) => (
+              {selectedPhotos.map((photo, index) => (
                 <div
                   key={photo.id}
-                  className="group relative aspect-[4/3] rounded-2xl overflow-hidden bg-zinc-100 border-2 border-[#114234] shadow-xs"
+                  onClick={() => setLightboxIndex(index)}
+                  className="group relative aspect-[4/3] rounded-2xl overflow-hidden bg-zinc-100 border-2 border-[#114234] shadow-xs cursor-pointer hover:shadow-lg transition-all duration-200"
                 >
-                  <Image
+                  <GalleryImage
                     src={photo.thumbnail_url}
                     alt={photo.filename}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    unoptimized
+                    index={index}
                   />
                   
                   {/* Selected Indicator Badge */}
@@ -330,22 +485,40 @@ export default function GallerySelectionsPage({
                     <Check className="w-3.5 h-3.5" />
                   </div>
 
-                  {/* Download HD Button */}
-                  <a
-                    href={`/api/admin/galleries/${id}/download/${photo.id}`}
-                    download
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute top-2.5 right-2.5 bg-black/60 hover:bg-[#114234] text-white hover:text-[#bef238] p-1.5 rounded-full shadow-md transition-all z-20"
-                    title="Download HD photo"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                  </a>
+                  {/* Hover Zoom Overlay */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
+                    <div className="p-2 bg-white/20 backdrop-blur-xs rounded-full text-white">
+                      <ZoomIn className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  {/* Actions Header (Remove + Download) */}
+                  <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-20">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemovePhoto(photo.id);
+                      }}
+                      disabled={saving}
+                      className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow-md transition-all cursor-pointer disabled:opacity-50"
+                      title="Remove from selection"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                    <a
+                      href={`/api/admin/galleries/${id}/download/${photo.id}`}
+                      download
+                      onClick={(e) => e.stopPropagation()}
+                      className="bg-black/60 hover:bg-[#114234] text-white hover:text-[#bef238] p-1.5 rounded-full shadow-md transition-all"
+                      title="Download HD photo"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
 
                   {/* Filename Bar */}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-2.5 text-white flex items-center justify-between">
-                    <span className="text-[11px] font-mono font-bold truncate">
-                      {photo.filename}
-                    </span>
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2.5 text-white text-xs font-mono truncate z-20">
+                    {photo.filename}
                   </div>
                 </div>
               ))}
@@ -353,6 +526,155 @@ export default function GallerySelectionsPage({
           )}
         </section>
 
+      {/* ------------------------------------------------------------- */}
+      {/* Admin Manage / Select Photos Modal                           */}
+      {/* ------------------------------------------------------------- */}
+      {showManageModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl border border-zinc-200 max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/80">
+              <div>
+                <h3 className="text-lg font-extrabold text-zinc-950 tracking-tight">
+                  Select Photos for Client ({draftSelectedIds.size} Selected)
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Pick or uncheck photos to modify the client's selection.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowManageModal(false)}
+                className="p-2 text-zinc-400 hover:text-zinc-700 rounded-xl hover:bg-zinc-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Search & Filter Bar */}
+            <div className="p-4 border-b border-zinc-100 bg-white flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setManageFilter("all")}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold ${
+                    manageFilter === "all"
+                      ? "bg-[#114234] text-white"
+                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                  }`}
+                >
+                  All Photos ({allPhotos.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setManageFilter("selected")}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold ${
+                    manageFilter === "selected"
+                      ? "bg-[#114234] text-white"
+                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                  }`}
+                >
+                  Selected ({draftSelectedIds.size})
+                </button>
+              </div>
+
+              <div className="relative w-full sm:w-64">
+                <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search filename..."
+                  className="w-full pl-9 pr-4 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-900 focus:outline-none focus:border-[#114234]"
+                />
+              </div>
+            </div>
+
+            {/* Modal Photo Grid */}
+            <div className="p-6 overflow-y-auto flex-1 bg-zinc-50/50">
+              {filteredManagePhotos.length === 0 ? (
+                <div className="p-12 text-center text-zinc-400 text-xs">
+                  No photos found matching your criteria.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {filteredManagePhotos.map((photo) => {
+                    const isDraftSelected = draftSelectedIds.has(photo.id);
+                    return (
+                      <div
+                        key={photo.id}
+                        onClick={() => toggleDraftPhoto(photo.id)}
+                        className={`group relative aspect-[4/3] rounded-2xl overflow-hidden cursor-pointer transition-all border-2 ${
+                          isDraftSelected
+                            ? "border-[#114234] ring-2 ring-[#bef238] shadow-md scale-[0.98]"
+                            : "border-transparent hover:border-zinc-300"
+                        }`}
+                      >
+                        <GalleryImage
+                          src={photo.thumbnail_url}
+                          alt={photo.filename}
+                          fill
+                          sizes="(max-width: 640px) 50vw, 20vw"
+                          className="object-cover"
+                        />
+                        
+                        <div
+                          className={`absolute top-2.5 left-2.5 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                            isDraftSelected
+                              ? "bg-[#114234] text-[#bef238]"
+                              : "bg-black/40 text-white border border-white/40"
+                          }`}
+                        >
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </div>
+
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 p-2 text-white text-[10px] font-mono truncate">
+                          {photo.filename}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-zinc-100 bg-white flex items-center justify-between">
+              <span className="text-xs font-semibold text-zinc-600">
+                {draftSelectedIds.size} photos selected
+              </span>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowManageModal(false)}
+                  className="px-4 py-2 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-600 hover:bg-zinc-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveManageSelections}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#114234] hover:bg-[#0d3429] text-white font-bold text-xs shadow-md disabled:opacity-50 cursor-pointer"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#bef238]" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>Save Changes ({draftSelectedIds.size})</span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Zip Download Overlay */}
       {zipProgress && zipProgress.isActive && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl border border-zinc-100/80 flex flex-col items-center text-center space-y-4">
@@ -381,6 +703,96 @@ export default function GallerySelectionsPage({
             <p className="text-[10px] text-zinc-400 leading-normal italic">
               Mohon jangan tutup halaman ini sampai proses download selesai.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-zinc-900 border border-zinc-800 text-white text-xs sm:text-sm font-medium shadow-2xl animate-slideUp pointer-events-none">
+          {toast.type === "success" ? (
+            <CheckCircle2 className="w-4 h-4 text-[#bef238] shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+          )}
+          <span>{toast.message}</span>
+        </div>
+      )}
+
+      {/* Admin Selections Fullscreen Lightbox Modal */}
+      {lightboxIndex !== null && selectedPhotos[lightboxIndex] && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex flex-col justify-between select-none animate-fadeIn">
+          {/* Lightbox Header Bar */}
+          <div className="flex items-center justify-between p-4 sm:p-6 bg-gradient-to-b from-black/80 to-transparent z-10">
+            <div className="flex items-center gap-2 sm:gap-3 font-mono text-xs text-zinc-300 min-w-0">
+              <span className="truncate max-w-[160px] sm:max-w-[300px] font-bold text-white" title={selectedPhotos[lightboxIndex].filename}>
+                {selectedPhotos[lightboxIndex].filename}
+              </span>
+              <span className="text-zinc-600 shrink-0">•</span>
+              <span className="shrink-0 text-zinc-400">
+                {lightboxIndex + 1} of {selectedPhotos.length}
+              </span>
+            </div>
+
+            {/* Right Controls */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <a
+                href={`/api/admin/galleries/${id}/download/${selectedPhotos[lightboxIndex].id}`}
+                download
+                className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+                title="Download HD photo"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Download HD</span>
+              </a>
+
+              <button
+                onClick={() => setLightboxIndex(null)}
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                aria-label="Close lightbox"
+                title="Close Lightbox"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Lightbox Center Image View */}
+          <div className="relative flex-1 flex items-center justify-center p-4 sm:p-8">
+            {/* Previous Button */}
+            <button
+              onClick={() => setLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : selectedPhotos.length - 1))}
+              className="absolute left-4 p-3 rounded-full bg-black/50 hover:bg-black/80 text-white border border-white/10 transition-colors z-20 cursor-pointer"
+              aria-label="Previous photo"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+
+            {/* Main Preview Image */}
+            <div className="relative w-full h-full max-h-[82vh] flex items-center justify-center">
+              <GalleryImage
+                src={selectedPhotos[lightboxIndex].preview_url}
+                alt={selectedPhotos[lightboxIndex].filename}
+                fill
+                priority
+                className="object-contain"
+                index={lightboxIndex}
+              />
+            </div>
+
+            {/* Next Button */}
+            <button
+              onClick={() => setLightboxIndex((prev) => (prev !== null && prev < selectedPhotos.length - 1 ? prev + 1 : 0))}
+              className="absolute right-4 p-3 rounded-full bg-black/50 hover:bg-black/80 text-white border border-white/10 transition-colors z-20 cursor-pointer"
+              aria-label="Next photo"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Lightbox Bottom Info Bar */}
+          <div className="p-4 text-center text-[11px] text-zinc-500">
+            Use Left / Right arrow keys to navigate • Esc to close
           </div>
         </div>
       )}

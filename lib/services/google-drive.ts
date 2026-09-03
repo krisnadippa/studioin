@@ -143,7 +143,7 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
             sizeBytes: Number(file.size) || 12000000,
             width: file.imageMediaMetadata?.width || 6000,
             height: file.imageMediaMetadata?.height || 4000,
-            thumbnailLink: `https://lh3.googleusercontent.com/d/${file.id}=w500` || file.thumbnailLink,
+            thumbnailLink: file.thumbnailLink || `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`,
           }));
         }
       } catch (err) {

@@ -15,19 +15,11 @@ export class SelectionService {
       throw new Error("Please select at least one photo before submitting.");
     }
 
-    const selection: Selection = {
-      id: `sel-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      gallery_id: input.gallery_id,
-      client_name: input.client_name || "Client",
+    return db.updateSelectionsByGalleryId(input.gallery_id, input.selected_photo_ids, {
+      client_name: input.client_name,
       client_email: input.client_email,
       client_notes: input.client_notes,
-      submitted_at: new Date().toISOString(),
-      status: "submitted",
-      selected_photo_ids: input.selected_photo_ids,
-      created_at: new Date().toISOString(),
-    };
-
-    return db.createSelection(selection);
+    });
   }
 
   static async getSelectionsForGallery(galleryId: string): Promise<Selection[]> {

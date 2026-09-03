@@ -48,8 +48,10 @@ export async function GET(
     }
   }
 
-  // Fetch photos
+  // Fetch photos & selections
   const photos = await db.getPhotosByGalleryId(gallery.id);
+  const selections = await db.getSelectionsByGalleryId(gallery.id);
+  const latestSelection = selections.length > 0 ? selections[0] : null;
 
   // Return public safe gallery data (no internal folder IDs, no secret hashes)
   return NextResponse.json({
@@ -65,6 +67,15 @@ export async function GET(
       max_selections: gallery.max_selections,
       allow_download: gallery.allow_download,
     },
+    latest_selection: latestSelection
+      ? {
+          id: latestSelection.id,
+          selected_photo_ids: latestSelection.selected_photo_ids,
+          submitted_at: latestSelection.submitted_at,
+          client_notes: latestSelection.client_notes,
+          client_email: latestSelection.client_email,
+        }
+      : null,
     photos: photos.map((p) => ({
       id: p.id,
       filename: p.filename,
