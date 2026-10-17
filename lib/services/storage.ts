@@ -15,14 +15,14 @@ export class CloudflareR2StorageService implements IStorageService {
     if (this.r2PublicDomain) {
       return `https://${this.r2PublicDomain}/galleries/${galleryId}/thumbnails/${photoId}.webp`;
     }
-    return fallbackUrl || `/api/placeholder/thumb/${galleryId}/${photoId}`;
+    return fallbackUrl || `/api/photo/${photoId}`;
   }
 
   getPreviewUrl(galleryId: string, photoId: string, fallbackUrl?: string): string {
     if (this.r2PublicDomain) {
       return `https://${this.r2PublicDomain}/galleries/${galleryId}/previews/${photoId}.webp`;
     }
-    return fallbackUrl || `/api/placeholder/preview/${galleryId}/${photoId}`;
+    return fallbackUrl || `/api/photo/${photoId}`;
   }
 
   async deleteGalleryAssets(galleryId: string): Promise<boolean> {

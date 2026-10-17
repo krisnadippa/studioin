@@ -492,18 +492,23 @@ class NeonDatabase {
       if (thumb.includes("googleusercontent.com/drive-storage")) {
         thumb = thumb.replace(/=([ws])?\d+/, "=s800");
         if (prev.includes("googleusercontent.com/drive-storage")) {
-          prev = prev.replace(/=([ws])?\d+/, "=s1600");
+          prev = prev.replace(/=([ws])?\d+/, "=s2048");
         }
       } else if (thumb.includes("lh3.googleusercontent.com/d/")) {
         const driveId = p.drive_file_id || p.id.split("-").pop();
         thumb = `https://drive.google.com/thumbnail?id=${driveId}&sz=w800`;
-        prev = `https://drive.google.com/thumbnail?id=${driveId}&sz=w1600`;
+        prev = `https://drive.google.com/thumbnail?id=${driveId}&sz=w2048`;
+      }
+
+      if (p.drive_file_id && (!thumb || thumb.includes("/api/placeholder/"))) {
+        thumb = `https://drive.google.com/thumbnail?id=${p.drive_file_id}&sz=w800`;
+        prev = `https://drive.google.com/thumbnail?id=${p.drive_file_id}&sz=w2048`;
       }
 
       return {
         ...p,
-        thumbnail_url: thumb || `/api/photo/${p.id}`,
-        preview_url: prev || thumb || `/api/photo/${p.id}`,
+        thumbnail_url: thumb || (p.drive_file_id ? `https://drive.google.com/thumbnail?id=${p.drive_file_id}&sz=w800` : `/api/photo/${p.id}`),
+        preview_url: prev || thumb || (p.drive_file_id ? `https://drive.google.com/thumbnail?id=${p.drive_file_id}&sz=w2048` : `/api/photo/${p.id}`),
       };
     });
   }

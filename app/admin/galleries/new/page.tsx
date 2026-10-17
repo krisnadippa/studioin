@@ -61,8 +61,8 @@ export default function NewGalleryPage() {
     setSubmitting(true);
     setProcessingState({
       inProgress: true,
-      progressText: "Validating Google Drive folder...",
-      percent: 25,
+      progressText: "Memindai foto langsung dari Google Drive...",
+      percent: 45,
     });
 
     try {
@@ -90,26 +90,19 @@ export default function NewGalleryPage() {
         throw new Error(data.error || "Failed to create gallery");
       }
 
+      const count = data.gallery?.total_photos || 0;
       setProcessingState({
         inProgress: true,
         galleryId: data.gallery.id,
-        progressText: "Scanning photos & generating optimized WebP previews...",
-        percent: 75,
+        progressText: count > 0 
+          ? `Berhasil sinkronisasi ${count} foto dari Google Drive! Mengalihkan...` 
+          : "Galeri siap! Mengalihkan...",
+        percent: 100,
       });
 
-      // Simulate smooth completion
       setTimeout(() => {
-        setProcessingState({
-          inProgress: true,
-          galleryId: data.gallery.id,
-          progressText: "Gallery ready! Redirecting...",
-          percent: 100,
-        });
-
-        setTimeout(() => {
-          router.push(`/admin/galleries/${data.gallery.id}`);
-        }, 800);
-      }, 1000);
+        router.push(`/admin/galleries/${data.gallery.id}`);
+      }, 700);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "An error occurred";
       setError(msg);

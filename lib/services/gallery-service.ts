@@ -77,19 +77,22 @@ export class GalleryService {
 
     await db.createGallery(newGallery);
 
-    // Launch non-blocking background scanning and processing
-    this.processGalleryInBackground(newGallery.id, folderId).catch((err) => {
-      console.error(`[GalleryService] Background processing failed for ${newGallery.id}:`, err);
-    });
+    // Automatically synchronize photos from Google Drive directly before returning
+    try {
+      await this.processGalleryInBackground(newGallery.id, folderId);
+    } catch (err) {
+      console.error(`[GalleryService] Initial Drive sync failed for ${newGallery.id}:`, err);
+    }
 
-    return newGallery;
+    const readyGallery = await db.getGalleryById(newGallery.id);
+    return readyGallery || newGallery;
   }
 
   /**
-   * Non-blocking background worker that reads Google Drive metadata,
-   * generates photo records, and transitions gallery status to ready.
+   * Reads Google Drive metadata directly, generates photo records with high-speed CDN URLs,
+   * and transitions gallery status to ready.
    */
-  static async processGalleryInBackground(galleryId: string, driveFolderId: string): Promise<void> {
+  static async processGalleryInBackground(galleryId: string, driveFolderId: string): Promise<Photo[]> {
     try {
       await db.updateGallery(galleryId, { status: "processing", processed_photos: 0 });
 
@@ -97,29 +100,14 @@ export class GalleryService {
       const driveFiles = await googleDriveService.listFiles(driveFolderId, 1000);
       const total = driveFiles.length;
 
-      await db.updateGallery(galleryId, { total_photos: total });
-
       const photos: Photo[] = [];
       for (let i = 0; i < driveFiles.length; i++) {
         const file = driveFiles[i];
         const photoId = `photo-${galleryId}-${i + 1}`;
 
-        // Build optimized thumbnail (~800px) and high-definition preview (~1600px) URLs
-        let thumbUrl = storageService.getThumbnailUrl(galleryId, photoId);
-        let previewUrl = storageService.getPreviewUrl(galleryId, photoId);
-
-        if (file.thumbnailLink) {
-          if (file.thumbnailLink.includes("images.unsplash.com")) {
-            thumbUrl = file.thumbnailLink;
-            previewUrl = file.thumbnailLink.replace("w=500", "w=2048");
-          } else if (file.thumbnailLink.includes("googleusercontent.com")) {
-            thumbUrl = file.thumbnailLink.replace(/=([ws])?\d+/, "=s800");
-            previewUrl = file.thumbnailLink.replace(/=([ws])?\d+/, "=s1600");
-          } else {
-            thumbUrl = file.thumbnailLink;
-            previewUrl = file.thumbnailLink;
-          }
-        }
+        // Direct high-quality Google Drive CDN thumbnail (~800px) and preview (~2048px)
+        const thumbUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
+        const previewUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w2048`;
 
         photos.push({
           id: photoId,
@@ -144,12 +132,15 @@ export class GalleryService {
         processed_photos: total,
         error_message: undefined,
       });
+
+      return photos;
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Unable to process Google Drive folder";
       await db.updateGallery(galleryId, {
         status: "failed",
         error_message: errorMessage,
       });
+      throw err;
     }
   }
 

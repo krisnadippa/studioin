@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/store";
+import { GalleryService } from "@/lib/services/gallery-service";
 import { cookies } from "next/headers";
 
 export async function GET(
@@ -49,7 +50,19 @@ export async function GET(
   }
 
   // Fetch photos & selections
-  const photos = await db.getPhotosByGalleryId(gallery.id);
+  let photos = await db.getPhotosByGalleryId(gallery.id);
+
+  // Auto-sync safeguard:
+  // If gallery has 0 photos in DB, but has drive_folder_id, automatically sync once so customer never sees empty gallery!
+  if (photos.length === 0 && gallery.drive_folder_id && gallery.status !== "failed" && gallery.status !== "processing") {
+    try {
+      await GalleryService.processGalleryInBackground(gallery.id, gallery.drive_folder_id);
+      photos = await db.getPhotosByGalleryId(gallery.id);
+    } catch (syncErr) {
+      console.warn(`[AutoSync] Failed to sync gallery ${gallery.id}:`, syncErr);
+    }
+  }
+
   const selections = await db.getSelectionsByGalleryId(gallery.id);
   const latestSelection = selections.length > 0 ? selections[0] : null;
 

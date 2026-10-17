@@ -21,11 +21,27 @@ export async function GET(
     return NextResponse.json({ error: "Gallery not found or unauthorized" }, { status: 404 });
   }
 
-  const photos = await db.getPhotosByGalleryId(id);
+  let photos = await db.getPhotosByGalleryId(id);
+  let galleryData = gallery;
+
+  // Auto-sync safeguard:
+  if (photos.length === 0 && gallery.drive_folder_id && gallery.status !== "failed" && gallery.status !== "processing") {
+    try {
+      await GalleryService.processGalleryInBackground(id, gallery.drive_folder_id);
+      photos = await db.getPhotosByGalleryId(id);
+      const updatedGallery = await db.getGalleryById(id, user.userId);
+      if (updatedGallery) {
+        galleryData = updatedGallery;
+      }
+    } catch (syncErr) {
+      console.warn(`[Admin AutoSync] Failed to sync gallery ${id}:`, syncErr);
+    }
+  }
+
   const selections = await db.getSelectionsByGalleryId(id);
 
   return NextResponse.json({
-    gallery,
+    gallery: galleryData,
     photos,
     selections,
   });
