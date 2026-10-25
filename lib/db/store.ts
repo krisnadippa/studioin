@@ -323,6 +323,37 @@ class NeonDatabase {
     return rows[0] as AdminUser;
   }
 
+  async adminEmailExists(email: string): Promise<boolean> {
+    await this.ensureInitialized();
+    const rows = await sql`
+      SELECT id FROM admin_users
+      WHERE LOWER(email) = LOWER(${email.trim()})
+      LIMIT 1
+    `;
+    return rows.length > 0;
+  }
+
+  async createAdminUser(data: {
+    id: string;
+    name: string;
+    email: string;
+    passwordHash: string;
+  }): Promise<AdminUser> {
+    await this.ensureInitialized();
+    const now = new Date().toISOString();
+    await sql`
+      INSERT INTO admin_users (id, email, name, password_hash, created_at)
+      VALUES (${data.id}, ${data.email.trim().toLowerCase()}, ${data.name.trim()}, ${data.passwordHash}, ${now})
+    `;
+    return {
+      id: data.id,
+      email: data.email.trim().toLowerCase(),
+      name: data.name.trim(),
+      password_hash: data.passwordHash,
+      created_at: now,
+    };
+  }
+
   // --- Gallery Methods ---
   async listGalleries(adminId?: string): Promise<Gallery[]> {
     await this.ensureInitialized();
