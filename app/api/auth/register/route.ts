@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, name: result.name || name });
   } catch (error: unknown) {
     console.error("[POST /api/auth/register]", error);
     const msg =

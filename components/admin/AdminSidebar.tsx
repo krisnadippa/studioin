@@ -12,6 +12,7 @@ import {
   PlusCircle,
   ChevronLeft,
   ChevronRight,
+  Crown,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -20,6 +21,12 @@ export function AdminSidebar() {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [userRole, setUserRole] = useState<"superadmin" | "admin" | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    name: string;
+    email: string;
+    role: "superadmin" | "admin";
+  } | null>(null);
 
   // Load collapse state from localStorage on client side
   useEffect(() => {
@@ -27,6 +34,16 @@ export function AdminSidebar() {
     if (stored === "true") {
       setIsCollapsed(true);
     }
+    // Fetch user profile and role
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.user) {
+          setCurrentUser(d.user);
+          if (d.user.role) setUserRole(d.user.role);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const toggleCollapse = () => {
@@ -51,6 +68,9 @@ export function AdminSidebar() {
     { label: "Galleries", href: "/admin/galleries", icon: Images },
     { label: "Selections", href: "/admin/galleries/gal-andi-sinta/selections", icon: CheckSquare },
     { label: "Settings", href: "/admin/settings", icon: Settings },
+    ...(userRole === "superadmin"
+      ? [{ label: "Super Admin", href: "/superadmin", icon: Crown }]
+      : []),
   ];
 
   return (
@@ -90,8 +110,46 @@ export function AdminSidebar() {
           </button>
         </div>
 
+        {/* User Identity / Studio Card */}
+        {currentUser && (
+          <div className={`pt-3 transition-all duration-300 ${isCollapsed ? "px-2 flex justify-center" : "px-3"}`}>
+            {isCollapsed ? (
+              <div
+                title={`Galeri ${currentUser.name} (${currentUser.email})`}
+                className="w-10 h-10 rounded-xl bg-[#154c3c] border border-emerald-600/50 flex items-center justify-center font-bold text-xs text-[#bef238]"
+              >
+                {currentUser.name ? currentUser.name.slice(0, 2).toUpperCase() : "ST"}
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-2xl bg-[#0e372b] border border-[#1d634f] flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#bef238] text-[#114234] font-black flex items-center justify-center shrink-0 text-xs shadow-xs">
+                  {currentUser.name ? currentUser.name.slice(0, 2).toUpperCase() : "ST"}
+                </div>
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-white text-xs font-bold truncate block tracking-tight">
+                      Galeri {currentUser.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {currentUser.role === "superadmin" ? (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-300 bg-amber-950/60 px-1.5 py-0.2 rounded border border-amber-600/40">
+                        <Crown className="w-2.5 h-2.5" /> Super Admin
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-emerald-300/90 font-medium truncate block">
+                        {currentUser.email}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Quick Action */}
-        <div className={`pt-5 pb-2 transition-all duration-300 ${isCollapsed ? "px-2 flex justify-center" : "px-4"}`}>
+        <div className={`pt-4 pb-2 transition-all duration-300 ${isCollapsed ? "px-2 flex justify-center" : "px-4"}`}>
           {isCollapsed ? (
             <Link
               href="/admin/galleries/new"

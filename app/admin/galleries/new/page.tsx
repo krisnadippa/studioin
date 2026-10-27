@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -30,6 +30,7 @@ export default function NewGalleryPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accountRestricted, setAccountRestricted] = useState(false);
   const [processingState, setProcessingState] = useState<{
     inProgress: boolean;
     galleryId?: string;
@@ -40,6 +41,20 @@ export default function NewGalleryPage() {
     progressText: "",
     percent: 0,
   });
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.user?.is_restricted) {
+          setAccountRestricted(true);
+          setError(
+            "__RESTRICTION__Akun Anda telah dikunci oleh Super Admin untuk pembuatan galeri baru. Silakan hubungi Super Admin jika ini keliru."
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const validateDriveUrl = (url: string) => {
     if (!url.trim()) return false;
@@ -87,6 +102,9 @@ export default function NewGalleryPage() {
         if (res.status === 401 || data.error === "Unauthorized") {
           throw new Error("UNAUTHORIZED_SESSION");
         }
+        if (data.error === "ACCOUNT_RESTRICTED" || data.error === "GALLERY_LIMIT_REACHED") {
+          throw new Error(`RESTRICTION:${data.message}`);
+        }
         throw new Error(data.error || "Failed to create gallery");
       }
 
@@ -105,7 +123,11 @@ export default function NewGalleryPage() {
       }, 700);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "An error occurred";
-      setError(msg);
+      if (msg.startsWith("RESTRICTION:")) {
+        setError(`__RESTRICTION__${msg.slice(12)}`);
+      } else {
+        setError(msg);
+      }
       setSubmitting(false);
       setProcessingState({ inProgress: false, progressText: "", percent: 0 });
     }
@@ -131,32 +153,50 @@ export default function NewGalleryPage() {
         </div>
 
         {error && (
-          <div className="p-4 sm:p-5 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 shrink-0 text-red-600 mt-0.5" />
-              <div>
-                <span className="font-bold block mb-0.5">
-                  {error === "UNAUTHORIZED_SESSION" || error === "Unauthorized"
-                    ? "Sesi Admin Berakhir (Unauthorized)"
-                    : "Unable to process this gallery:"}
-                </span>
-                <span className="text-red-700 block">
-                  {error === "UNAUTHORIZED_SESSION" || error === "Unauthorized"
-                    ? "Sesi login admin Anda telah berakhir atau tidak terdeteksi. Silakan login kembali ke akun admin."
-                    : error}
-                </span>
+          error.startsWith("__RESTRICTION__") ? (
+            <div className="p-5 rounded-2xl bg-orange-50 border-2 border-orange-300 text-orange-900 flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-100 border border-orange-300 rounded-xl flex items-center justify-center shrink-0">
+                  <Lock className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <span className="font-bold text-sm block text-orange-800">Account Restricted</span>
+                  <span className="text-xs text-orange-700 block mt-0.5">Your gallery creation has been restricted by the administrator</span>
+                </div>
               </div>
+              <p className="text-xs text-orange-700 bg-orange-100 rounded-xl px-4 py-3 border border-orange-200 leading-relaxed">
+                {error.slice(15)}
+              </p>
             </div>
-            {(error === "UNAUTHORIZED_SESSION" || error === "Unauthorized") && (
-              <Link
-                href="/admin/login"
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 text-center"
-              >
-                Login Admin Kembali
-              </Link>
-            )}
-          </div>
+          ) : (
+            <div className="p-4 sm:p-5 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="w-5 h-5 shrink-0 text-red-600 mt-0.5" />
+                <div>
+                  <span className="font-bold block mb-0.5">
+                    {error === "UNAUTHORIZED_SESSION" || error === "Unauthorized"
+                      ? "Sesi Admin Berakhir (Unauthorized)"
+                      : "Unable to process this gallery:"}
+                  </span>
+                  <span className="text-red-700 block">
+                    {error === "UNAUTHORIZED_SESSION" || error === "Unauthorized"
+                      ? "Sesi login admin Anda telah berakhir atau tidak terdeteksi. Silakan login kembali ke akun admin."
+                      : error}
+                  </span>
+                </div>
+              </div>
+              {(error === "UNAUTHORIZED_SESSION" || error === "Unauthorized") && (
+                <Link
+                  href="/admin/login"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 text-center"
+                >
+                  Login Admin Kembali
+                </Link>
+              )}
+            </div>
+          )
         )}
+
 
         {/* Processing Progress Modal / Banner */}
         {processingState.inProgress && (
@@ -384,13 +424,22 @@ export default function NewGalleryPage() {
 
             <button
               type="submit"
-              disabled={submitting}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#bef238] hover:bg-[#b2e82e] text-[#114234] font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md active:scale-98 disabled:opacity-60 disabled:pointer-events-none"
+              disabled={submitting || accountRestricted}
+              className={`inline-flex items-center gap-2 px-6 py-2.5 font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md active:scale-98 ${
+                accountRestricted
+                  ? "bg-zinc-200 text-zinc-500 cursor-not-allowed border border-zinc-300"
+                  : "bg-[#bef238] hover:bg-[#b2e82e] text-[#114234] disabled:opacity-60 disabled:pointer-events-none"
+              }`}
             >
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Processing Gallery...</span>
+                </>
+              ) : accountRestricted ? (
+                <>
+                  <Lock className="w-4 h-4 text-zinc-500" />
+                  <span>Gallery Creation Locked</span>
                 </>
               ) : (
                 <>

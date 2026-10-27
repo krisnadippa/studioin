@@ -39,6 +39,7 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [loggedInName, setLoggedInName] = useState<string | null>(null);
 
   // Field-level errors
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -133,11 +134,16 @@ export default function AdminLoginPage() {
         throw new Error(data.error || "Sign-in failed.");
       }
 
+      setLoggedInName(data.name || null);
       setSuccess(true);
       setTimeout(() => {
-        router.push("/admin");
+        if (data.role === "superadmin") {
+          router.push("/superadmin");
+        } else {
+          router.push("/admin");
+        }
         router.refresh();
-      }, 600);
+      }, 1000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "An error occurred.";
       setServerError(msg);
@@ -215,7 +221,12 @@ export default function AdminLoginPage() {
             {success && (
               <div className="mb-6 p-4 rounded-xl bg-emerald-900/40 border border-emerald-500/40 flex items-center gap-3 text-emerald-300 text-sm animate-fadeIn">
                 <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" />
-                <span>Signed in — redirecting to dashboard…</span>
+                <div>
+                  <p className="font-bold text-white">Login Berhasil!</p>
+                  <p className="text-xs text-emerald-300">
+                    Selamat datang di {loggedInName ? `Galeri ${loggedInName}` : "Dashboard"}. Mengalihkan...
+                  </p>
+                </div>
               </div>
             )}
 

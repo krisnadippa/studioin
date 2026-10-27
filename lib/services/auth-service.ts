@@ -18,10 +18,12 @@ export interface SessionPayload {
   userId: string;
   email: string;
   name: string;
+  role: "superadmin" | "admin";
 }
 
 export interface AuthResult {
   success: boolean;
+  name?: string;
   error?: string;
   /** Field-level errors for form UX */
   fieldErrors?: Record<string, string>;
@@ -57,6 +59,7 @@ export class AuthService {
         userId: payload.userId as string,
         email: payload.email as string,
         name: payload.name as string,
+        role: (payload.role as string) === "superadmin" ? "superadmin" : "admin",
       };
     } catch {
       return null;
@@ -113,18 +116,19 @@ export class AuthService {
       userId: admin.id,
       email: admin.email,
       name: admin.name,
+      role: admin.role,
     });
 
     await this.setSessionCookie(token);
 
-    return { success: true };
+    return { success: true, name: admin.name };
   }
 
   // ── Login ─────────────────────────────────────────────────────────────────
   static async login(
     email: string,
     password: string
-  ): Promise<AuthResult & { token?: string }> {
+  ): Promise<AuthResult & { token?: string; role?: "superadmin" | "admin"; name?: string }> {
     const admin = await db.getAdminByEmail(email.trim());
 
     // Use constant-time comparison by always calling verifyPassword
@@ -143,11 +147,12 @@ export class AuthService {
       userId: admin.id,
       email: admin.email,
       name: admin.name,
+      role: admin.role,
     });
 
     await this.setSessionCookie(token);
 
-    return { success: true, token };
+    return { success: true, token, role: admin.role, name: admin.name };
   }
 
   // ── Logout ────────────────────────────────────────────────────────────────

@@ -54,6 +54,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // ── Check if user is restricted by super admin ──────────────────────────
+  const adminUser = await db.getAdminById(user.userId);
+  if (adminUser) {
+    if (adminUser.is_restricted) {
+      return NextResponse.json(
+        {
+          error: "ACCOUNT_RESTRICTED",
+          message: "Your account has been restricted by the administrator. You cannot create new galleries at this time. Please contact the administrator for more information.",
+        },
+        { status: 403 }
+      );
+    }
+    if (adminUser.gallery_limit !== null) {
+      const existingGalleries = await db.listGalleries(user.userId);
+      if (existingGalleries.length >= adminUser.gallery_limit) {
+        return NextResponse.json(
+          {
+            error: "GALLERY_LIMIT_REACHED",
+            message: `You have reached your gallery creation limit of ${adminUser.gallery_limit} galleries. Please contact the administrator to increase your limit.`,
+          },
+          { status: 403 }
+        );
+      }
+    }
+  }
+
   try {
     const body = await request.json();
     const { client_name, event_name, event_date, drive_folder_url, expiration_days, pin, max_selections, allow_download } = body;

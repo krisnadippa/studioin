@@ -53,5 +53,17 @@ export interface AdminUser {
   email: string;
   name: string;
   password_hash: string;
+  role: "superadmin" | "admin";
+  gallery_limit: number | null; // null = unlimited, 0 = blocked
+  is_restricted: boolean;
   created_at: string;
+}
+
+export interface UserActivityStats {
+  user: AdminUser;
+  total_galleries: number;
+  active_galleries: number;
+  expired_galleries: number;
+  total_selections: number;
+  last_activity: string | null;
 }

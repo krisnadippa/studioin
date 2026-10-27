@@ -314,7 +314,12 @@ export default function AdminRegisterPage() {
             {success && (
               <div className="mb-6 p-4 rounded-xl bg-emerald-900/40 border border-emerald-500/40 flex items-center gap-3 text-emerald-300 text-sm animate-fadeIn">
                 <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" />
-                <span>Account created! Redirecting to dashboard…</span>
+                <div>
+                  <p className="font-bold text-white">Akun Berhasil Dibuat!</p>
+                  <p className="text-xs text-emerald-300">
+                    Selamat datang di Galeri {name || "Studio"}. Mengalihkan ke dashboard...
+                  </p>
+                </div>
               </div>
             )}
 

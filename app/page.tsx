@@ -6,6 +6,16 @@ import { useState, useEffect, useRef } from "react";
 import Lenis from "lenis";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import {
+  X,
+  Sparkles,
+  CheckCircle2,
+  ArrowRight,
+  Lock,
+  UserPlus,
+  LogIn,
+  Zap,
+} from "lucide-react";
 
 interface ServiceItem {
   id: string;
@@ -126,6 +136,7 @@ const missionStatement = "Our mission is to support forward thinking organizatio
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeService, setActiveService] = useState<number>(1);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const missionTextRef = useRef<HTMLHeadingElement>(null);
 
@@ -265,12 +276,31 @@ export default function Home() {
       });
     }, containerRef);
 
+    const popupTimer = setTimeout(() => {
+      try {
+        const dismissed = sessionStorage.getItem("studioin_reg_popup_closed");
+        if (!dismissed) {
+          setShowRegisterModal(true);
+        }
+      } catch {
+        setShowRegisterModal(true);
+      }
+    }, 2200);
+
     return () => {
+      clearTimeout(popupTimer);
       ctx.revert();
       gsap.ticker.remove(updateTicker);
       lenis.destroy();
     };
   }, []);
+
+  const handleCloseModal = () => {
+    setShowRegisterModal(false);
+    try {
+      sessionStorage.setItem("studioin_reg_popup_closed", "true");
+    } catch {}
+  };
 
   const words = missionStatement.split(" ");
 
@@ -367,23 +397,18 @@ export default function Home() {
             {/* Top CTA Button & Mobile Toggle */}
             <div className="flex items-center gap-3">
               <Link
-                href="#contact"
-                className="group hidden sm:inline-flex items-center gap-3 pl-4 pr-1.5 py-1.5 rounded-full border border-[#2b6553] bg-[#0e372b]/60 hover:bg-[#154e3d] hover:border-[#387e68] transition-all duration-200 text-[14px] font-medium text-white shadow-sm"
+                href="/admin/login"
+                className="hidden sm:inline-flex text-[14px] font-semibold text-emerald-100 hover:text-white transition-colors px-3 py-1.5"
               >
-                <span>Get started</span>
+                Sign In
+              </Link>
+              <Link
+                href="/admin/register"
+                className="group hidden sm:inline-flex items-center gap-2 pl-4 pr-1.5 py-1.5 rounded-full border border-[#2b6553] bg-[#0e372b]/60 hover:bg-[#154e3d] hover:border-[#387e68] transition-all duration-200 text-[14px] font-medium text-white shadow-sm"
+              >
+                <span>Register</span>
                 <span className="w-6 h-6 rounded-full bg-[#bef238] text-[#114234] flex items-center justify-center transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
-                  <svg
-                    className="w-3.5 h-3.5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <line x1="6" y1="18" x2="18" y2="6"></line>
-                    <polyline points="9 6 18 6 18 15"></polyline>
-                  </svg>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </span>
               </Link>
 
@@ -409,18 +434,14 @@ export default function Home() {
             <div className="md:hidden flex flex-col gap-3 pt-5 pb-5 border-t border-emerald-800/40 mt-3 text-[15px] font-medium">
               <Link href="#campaigns" className="text-emerald-100 hover:text-white py-1">Campaigns</Link>
               <Link href="#about" className="text-emerald-100 hover:text-white py-1">About Us</Link>
-              <Link href="#how-it-works" className="text-emerald-100 hover:text-white py-1">How It Works</Link>
               <Link href="#services" className="text-emerald-100 hover:text-white py-1">Resources</Link>
-              <Link href="#contact" className="text-[#bef238] font-semibold py-1">Contact</Link>
+              <Link href="/admin/login" className="text-emerald-100 hover:text-white py-1">Sign In</Link>
               <Link
-                href="#contact"
+                href="/admin/register"
                 className="inline-flex items-center justify-between px-4 py-2.5 rounded-full bg-[#bef238] text-[#114234] font-semibold mt-2"
               >
-                <span>Get started</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <line x1="6" y1="18" x2="18" y2="6"></line>
-                  <polyline points="9 6 18 6 18 15"></polyline>
-                </svg>
+                <span>Create Gallery / Register</span>
+                <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           )}
@@ -442,23 +463,12 @@ export default function Home() {
               </p>
 
               <Link
-                href="#contact"
+                href="/admin/register"
                 className="group inline-flex items-center gap-3 bg-[#bef238] hover:bg-[#b2e82e] text-[#114234] font-bold text-[15px] sm:text-base pl-6 pr-2.5 py-2.5 rounded-full transition-all duration-200 shadow-md hover:shadow-lime-500/20 active:scale-98"
               >
-                <span>Create Now</span>
+                <span>Create Gallery</span>
                 <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#114234] text-[#bef238] flex items-center justify-center transition-transform group-hover:translate-x-0.5">
-                  <svg
-                    className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                    <polyline points="12 5 19 12 12 19"></polyline>
-                  </svg>
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </span>
               </Link>
             </div>
@@ -595,6 +605,122 @@ export default function Home() {
               </div>
             </div>
 
+          </div>
+
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------- */}
+      {/* SECTION: Studioin Creative Portal (Join / Login / Register)   */}
+      {/* ------------------------------------------------------------- */}
+      <section id="portal" className="w-full max-w-[1440px] mx-auto px-5 sm:px-8 md:px-12 lg:px-16 py-12 sm:py-16 md:py-20 border-b border-zinc-100">
+        {/* Green Hero Banner - boundary ends right below the workflow text */}
+        <div className="relative bg-[#114234] rounded-[28px] sm:rounded-[36px] overflow-hidden p-8 sm:p-10 md:p-12 text-white shadow-xl border border-emerald-800/40">
+          {/* Subtle Ambient Glows */}
+          <div className="absolute -top-32 -right-32 w-80 h-80 bg-[#bef238]/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Section Header */}
+          <div className="relative z-10 max-w-3xl">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-[1.15]">
+              Elevate Your Client Photo Proofing Experience
+            </h2>
+
+            <p className="text-emerald-100/90 text-sm sm:text-base leading-relaxed mt-4 max-w-2xl">
+              Deliver exclusive proofing galleries for every client photoshoot session. Enjoy instant Google Drive integration, secure PIN protection, and an effortless selection workflow.
+            </p>
+          </div>
+        </div>
+
+        {/* 2 Pathway Cards Grid (Clean layout beneath green banner) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+          
+          {/* Card 1: Register */}
+          <div className="bg-white border border-zinc-200/90 hover:border-emerald-700/50 hover:shadow-xl transition-all duration-300 rounded-3xl p-6 sm:p-8 flex flex-col justify-between group shadow-xs">
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#114234]">
+                  <UserPlus className="w-6 h-6" />
+                </div>
+                <span className="text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  New Studio
+                </span>
+              </div>
+
+              <h3 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight mb-2">
+                Create Photographer Account
+              </h3>
+              <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed mb-6">
+                Ready to upgrade your workflow? Register your studio account now to create client galleries with zero setup friction.
+              </p>
+
+              <div className="space-y-2.5 mb-8">
+                <div className="flex items-center gap-2.5 text-xs text-zinc-600">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Complete gallery management dashboard access</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-zinc-600">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Direct sync with Google Drive photoshoot folders</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-zinc-600">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Customizable PIN security & automated expiry control</span>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/admin/register"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-2xl bg-[#114234] hover:bg-[#185342] text-white font-bold text-xs sm:text-sm transition-all shadow-md active:scale-98"
+            >
+              <span>Register Account (Free)</span>
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1 text-[#bef238]" />
+            </Link>
+          </div>
+
+          {/* Card 2: Login */}
+          <div className="bg-white border border-zinc-200/90 hover:border-zinc-400 hover:shadow-xl transition-all duration-300 rounded-3xl p-6 sm:p-8 flex flex-col justify-between group shadow-xs">
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <div className="w-12 h-12 rounded-2xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-800">
+                  <LogIn className="w-6 h-6" />
+                </div>
+                <span className="text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200">
+                  Member Portal
+                </span>
+              </div>
+
+              <h3 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight mb-2">
+                Already Registered? Sign In
+              </h3>
+              <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed mb-6">
+                Already have an account? Sign in to manage active galleries, track client photo selections, and download final results.
+              </p>
+
+              <div className="space-y-2.5 mb-8">
+                <div className="flex items-center gap-2.5 text-xs text-zinc-600">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Track incoming client selections in real-time</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-zinc-600">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Download original full-resolution chosen photos</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-zinc-600">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Extend gallery proofing access with a single click</span>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/admin/login"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-2xl bg-zinc-50 hover:bg-zinc-100 text-zinc-900 font-bold text-xs sm:text-sm border border-zinc-300 transition-all shadow-xs active:scale-98"
+            >
+              <span>Sign In to Dashboard</span>
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </Link>
           </div>
 
         </div>
@@ -845,6 +971,112 @@ export default function Home() {
         </div>
 
       </footer>
+
+      {/* ------------------------------------------------------------- */}
+      {/* WELCOME / REGISTER POPUP MODAL                                */}
+      {/* ------------------------------------------------------------- */}
+      {showRegisterModal && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="relative w-full max-w-lg bg-[#114234] text-white rounded-[28px] sm:rounded-[34px] border border-emerald-600/50 shadow-2xl overflow-hidden p-6 sm:p-8 animate-in zoom-in-95 duration-300">
+            {/* Background Decorative Glow */}
+            <div className="absolute -top-24 -right-24 w-56 h-56 bg-[#bef238]/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-56 h-56 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Close Button */}
+            <button
+              onClick={handleCloseModal}
+              className="absolute top-5 right-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-emerald-200 hover:text-white transition-all cursor-pointer z-10"
+              aria-label="Close popup"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Badge */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#bef238]/20 border border-[#bef238]/40 text-[#bef238] text-[11px] font-bold uppercase tracking-wider mb-3">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Exclusive for Photographers</span>
+            </div>
+
+            {/* Headline */}
+            <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white leading-snug">
+              Create Exclusive Photo Proofing Galleries for Your Clients
+            </h3>
+
+            <p className="text-emerald-100/90 text-xs sm:text-sm mt-2 leading-relaxed">
+              Elevate your client photoshoot experience with a modern proofing portal. Clients review and select their favorite photos quickly, easily, and securely.
+            </p>
+
+            {/* Feature Bullets */}
+            <div className="mt-5 space-y-2.5">
+              <div className="flex items-start gap-3 p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-800/40">
+                <div className="p-1.5 rounded-lg bg-[#bef238]/20 text-[#bef238] shrink-0 mt-0.5">
+                  <Zap className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">Instant Google Drive Sync</span>
+                  <span className="text-[11px] text-emerald-200/80 block leading-tight">
+                    Simply paste your Google Drive folder link — all photos load instantly into your gallery.
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-800/40">
+                <div className="p-1.5 rounded-lg bg-[#bef238]/20 text-[#bef238] shrink-0 mt-0.5">
+                  <Lock className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">PIN Protection & Auto-Expiry</span>
+                  <span className="text-[11px] text-emerald-200/80 block leading-tight">
+                    Protect client privacy with customized PIN access and automated gallery expiration.
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-800/40">
+                <div className="p-1.5 rounded-lg bg-[#bef238]/20 text-[#bef238] shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">Real-Time Client Selections</span>
+                  <span className="text-[11px] text-emerald-200/80 block leading-tight">
+                    Clients select favorites directly on mobile or desktop without any app installation.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-6 flex flex-col gap-2.5">
+              <Link
+                href="/admin/register"
+                onClick={handleCloseModal}
+                className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-2xl bg-[#bef238] hover:bg-[#b2e82e] text-[#114234] font-extrabold text-xs sm:text-sm shadow-lg shadow-lime-950/30 transition-all active:scale-[0.98]"
+              >
+                <span>Register Now & Create Gallery</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+
+              <div className="flex items-center justify-between pt-2 text-xs">
+                <Link
+                  href="/admin/login"
+                  onClick={handleCloseModal}
+                  className="text-emerald-200 hover:text-white font-medium underline underline-offset-4 transition-colors"
+                >
+                  Already have an account? Sign In
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="text-emerald-300/70 hover:text-white font-medium cursor-pointer transition-colors"
+                >
+                  Maybe Later
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -31,6 +31,7 @@ export default function AdminGalleriesListPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ is_restricted?: boolean; gallery_limit?: number | null } | null>(null);
 
   // Toast Notification State
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -92,6 +93,12 @@ export default function AdminGalleriesListPage() {
 
   useEffect(() => {
     fetchGalleries();
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.user) setCurrentUser(d.user);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -218,7 +225,50 @@ export default function AdminGalleriesListPage() {
       />
 
       <main className="p-6 sm:p-8 max-w-[1440px] w-full mx-auto space-y-6">
-        
+        {currentUser?.is_restricted && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-orange-50 border-2 border-orange-300 text-orange-900 flex items-start sm:items-center justify-between gap-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-100 border border-orange-300 rounded-xl flex items-center justify-center shrink-0 text-orange-700">
+                <Lock className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <span className="font-bold text-xs sm:text-sm block text-orange-950">
+                  Pembuatan Galeri Dikunci
+                </span>
+                <span className="text-xs text-orange-800 block mt-0.5">
+                  Akun Anda sedang dibatasi oleh Super Admin. Anda tidak dapat membuat galeri baru saat ini.
+                </span>
+              </div>
+            </div>
+            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-orange-200/80 text-orange-800 rounded-lg shrink-0">
+              Restricted
+            </span>
+          </div>
+        )}
+
+        {currentUser?.gallery_limit !== null &&
+          currentUser?.gallery_limit !== undefined &&
+          galleries.length >= currentUser.gallery_limit && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-900 flex items-start sm:items-center justify-between gap-4 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 border border-amber-300 rounded-xl flex items-center justify-center shrink-0 text-amber-700">
+                  <AlertCircle className="w-5 h-5 text-amber-700" />
+                </div>
+                <div>
+                  <span className="font-bold text-xs sm:text-sm block text-amber-950">
+                    Batas Kuota Galeri Tercapai ({galleries.length} / {currentUser.gallery_limit} Galeri)
+                  </span>
+                  <span className="text-xs text-amber-800 block mt-0.5">
+                    Anda telah menggunakan seluruh kuota galeri yang dialokasikan. Hubungi Super Admin untuk menambah kuota.
+                  </span>
+                </div>
+              </div>
+              <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-amber-200/80 text-amber-900 rounded-lg shrink-0">
+                Quota Full
+              </span>
+            </div>
+          )}
+
         {/* Controls Bar: Search & Status Filters */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
           {/* Search Box */}

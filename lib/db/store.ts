@@ -1,4 +1,4 @@
-import { Gallery, Photo, Selection, AdminUser } from "./types";
+import { Gallery, Photo, Selection, AdminUser, UserActivityStats } from "./types";
 import bcrypt from "bcryptjs";
 import { sql } from "./neon";
 
@@ -84,13 +84,33 @@ class NeonDatabase {
           return;
         }
 
+        // 0. Ensure admin_users table has new columns (safe migration)
+        try {
+          await sql`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'admin'`;
+          await sql`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS gallery_limit INTEGER DEFAULT NULL`;
+          await sql`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS is_restricted BOOLEAN DEFAULT FALSE`;
+        } catch (e) {
+          console.warn("[NeonDatabase] Column migration warning (safe to ignore):", e);
+        }
+
         // 1. Check/Insert Admin Users
-        const admins = await sql`SELECT id FROM admin_users WHERE id = 'admin-01' LIMIT 1`;
+        const admins = await sql`SELECT id FROM admin_users WHERE id = 'superadmin-01' LIMIT 1`;
         if (admins.length === 0) {
+          const passwordHash0 = bcrypt.hashSync("superadmin123", 10);
+          await sql`
+            INSERT INTO admin_users (id, email, name, password_hash, role, gallery_limit, is_restricted, created_at)
+            VALUES ('superadmin-01', 'superadmin@studioin.com', 'Super Admin', ${passwordHash0}, 'superadmin', NULL, FALSE, ${new Date().toISOString()})
+            ON CONFLICT (id) DO NOTHING
+          `;
+          console.log("[NeonDatabase] Super admin user initialized.");
+        }
+
+        const admin1check = await sql`SELECT id FROM admin_users WHERE id = 'admin-01' LIMIT 1`;
+        if (admin1check.length === 0) {
           const passwordHash1 = bcrypt.hashSync("admin123", 10);
           await sql`
-            INSERT INTO admin_users (id, email, name, password_hash, created_at)
-            VALUES ('admin-01', 'admin@studioin.com', 'Studioin Photographer', ${passwordHash1}, ${new Date().toISOString()})
+            INSERT INTO admin_users (id, email, name, password_hash, role, gallery_limit, is_restricted, created_at)
+            VALUES ('admin-01', 'admin@studioin.com', 'Studioin Photographer', ${passwordHash1}, 'admin', NULL, FALSE, ${new Date().toISOString()})
             ON CONFLICT (id) DO NOTHING
           `;
           console.log("[NeonDatabase] Default admin user initialized.");
@@ -100,8 +120,8 @@ class NeonDatabase {
         if (admin2.length === 0) {
           const passwordHash2 = bcrypt.hashSync("admin123", 10);
           await sql`
-            INSERT INTO admin_users (id, email, name, password_hash, created_at)
-            VALUES ('admin-02', 'admin2@studioin.com', 'Admin Studioin 2', ${passwordHash2}, ${new Date().toISOString()})
+            INSERT INTO admin_users (id, email, name, password_hash, role, gallery_limit, is_restricted, created_at)
+            VALUES ('admin-02', 'admin2@studioin.com', 'Admin Studioin 2', ${passwordHash2}, 'admin', NULL, FALSE, ${new Date().toISOString()})
             ON CONFLICT (id) DO NOTHING
           `;
           console.log("[NeonDatabase] Admin user 2 initialized.");
@@ -111,8 +131,8 @@ class NeonDatabase {
         if (admin3.length === 0) {
           const passwordHash3 = bcrypt.hashSync("admin123", 10);
           await sql`
-            INSERT INTO admin_users (id, email, name, password_hash, created_at)
-            VALUES ('admin-03', 'admin3@studioin.com', 'Admin Studioin 3', ${passwordHash3}, ${new Date().toISOString()})
+            INSERT INTO admin_users (id, email, name, password_hash, role, gallery_limit, is_restricted, created_at)
+            VALUES ('admin-03', 'admin3@studioin.com', 'Admin Studioin 3', ${passwordHash3}, 'admin', NULL, FALSE, ${new Date().toISOString()})
             ON CONFLICT (id) DO NOTHING
           `;
           console.log("[NeonDatabase] Admin user 3 initialized.");
@@ -301,6 +321,19 @@ class NeonDatabase {
   }
 
   // --- Admin User Methods ---
+  private normalizeAdminUser(row: Record<string, unknown>): AdminUser {
+    return {
+      id: row.id as string,
+      email: row.email as string,
+      name: row.name as string,
+      password_hash: row.password_hash as string,
+      role: (row.role as string) === "superadmin" ? "superadmin" : "admin",
+      gallery_limit: row.gallery_limit != null ? Number(row.gallery_limit) : null,
+      is_restricted: Boolean(row.is_restricted),
+      created_at: row.created_at as string,
+    };
+  }
+
   async getAdminByEmail(email: string): Promise<AdminUser | null> {
     await this.ensureInitialized();
     const rows = await sql`
@@ -309,7 +342,7 @@ class NeonDatabase {
       LIMIT 1
     `;
     if (rows.length === 0) return null;
-    return rows[0] as AdminUser;
+    return this.normalizeAdminUser(rows[0] as Record<string, unknown>);
   }
 
   async getAdminById(id: string): Promise<AdminUser | null> {
@@ -320,7 +353,7 @@ class NeonDatabase {
       LIMIT 1
     `;
     if (rows.length === 0) return null;
-    return rows[0] as AdminUser;
+    return this.normalizeAdminUser(rows[0] as Record<string, unknown>);
   }
 
   async adminEmailExists(email: string): Promise<boolean> {
@@ -338,20 +371,98 @@ class NeonDatabase {
     name: string;
     email: string;
     passwordHash: string;
+    role?: "superadmin" | "admin";
+    gallery_limit?: number | null;
   }): Promise<AdminUser> {
     await this.ensureInitialized();
     const now = new Date().toISOString();
+    const role = data.role ?? "admin";
+    const galleryLimit = data.gallery_limit !== undefined ? data.gallery_limit : null;
     await sql`
-      INSERT INTO admin_users (id, email, name, password_hash, created_at)
-      VALUES (${data.id}, ${data.email.trim().toLowerCase()}, ${data.name.trim()}, ${data.passwordHash}, ${now})
+      INSERT INTO admin_users (id, email, name, password_hash, role, gallery_limit, is_restricted, created_at)
+      VALUES (${data.id}, ${data.email.trim().toLowerCase()}, ${data.name.trim()}, ${data.passwordHash}, ${role}, ${galleryLimit}, FALSE, ${now})
     `;
     return {
       id: data.id,
       email: data.email.trim().toLowerCase(),
       name: data.name.trim(),
       password_hash: data.passwordHash,
+      role,
+      gallery_limit: galleryLimit,
+      is_restricted: false,
       created_at: now,
     };
+  }
+
+  // --- SuperAdmin Methods ---
+  async listAllAdminUsers(): Promise<AdminUser[]> {
+    await this.ensureInitialized();
+    const rows = await sql`
+      SELECT * FROM admin_users
+      ORDER BY created_at ASC
+    `;
+    return (rows as Record<string, unknown>[]).map((r) => this.normalizeAdminUser(r));
+  }
+
+  async updateAdminRestriction(id: string, data: {
+    is_restricted?: boolean;
+    gallery_limit?: number | null;
+    role?: "superadmin" | "admin";
+  }): Promise<AdminUser | null> {
+    await this.ensureInitialized();
+    const current = await this.getAdminById(id);
+    if (!current) return null;
+
+    const isRestricted = data.is_restricted !== undefined ? data.is_restricted : current.is_restricted;
+    const galleryLimit = data.gallery_limit !== undefined ? data.gallery_limit : current.gallery_limit;
+    const role = data.role ?? current.role;
+
+    await sql`
+      UPDATE admin_users
+      SET is_restricted = ${isRestricted}, gallery_limit = ${galleryLimit}, role = ${role}
+      WHERE id = ${id}
+    `;
+
+    return { ...current, is_restricted: isRestricted, gallery_limit: galleryLimit, role };
+  }
+
+  async getAllUsersActivity(): Promise<UserActivityStats[]> {
+    await this.ensureInitialized();
+    const users = await this.listAllAdminUsers();
+    const results: UserActivityStats[] = [];
+
+    for (const user of users) {
+      const galleries = await sql`
+        SELECT id, status, created_at FROM galleries WHERE admin_id = ${user.id} ORDER BY created_at DESC
+      `;
+      const activeGalleries = (galleries as { status: string }[]).filter(
+        (g) => g.status === "ready" || g.status === "processing" || g.status === "preparing"
+      );
+      const expiredGalleries = (galleries as { status: string }[]).filter(
+        (g) => g.status === "expired"
+      );
+
+      let totalSelections = 0;
+      for (const g of galleries as { id: string }[]) {
+        const sels = await sql`SELECT COUNT(*) as count FROM selections WHERE gallery_id = ${g.id}`;
+        totalSelections += Number((sels[0] as { count: number }).count) || 0;
+      }
+
+      const lastActivity = galleries.length > 0
+        ? (galleries[0] as { created_at: string }).created_at
+        : null;
+
+      results.push({
+        user,
+        total_galleries: galleries.length,
+        active_galleries: activeGalleries.length,
+        expired_galleries: expiredGalleries.length,
+        total_selections: totalSelections,
+        last_activity: lastActivity,
+      });
+    }
+
+    return results;
   }
 
   // --- Gallery Methods ---

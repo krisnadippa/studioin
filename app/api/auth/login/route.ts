@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     // Reset rate limit on success so legitimate users are never locked out
     resetRateLimit(ip, "login");
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, role: result.role, name: result.name });
   } catch (error: unknown) {
     console.error("[POST /api/auth/login]", error);
     const msg =

@@ -39,6 +39,11 @@ export default function AdminDashboardPage() {
   });
   const [loading, setLoading] = useState(true);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    name: string;
+    email: string;
+    role: string;
+  } | null>(null);
 
   const fetchDashboardData = async () => {
     try {
@@ -58,6 +63,12 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchDashboardData();
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.user) setCurrentUser(d.user);
+      })
+      .catch(() => {});
   }, []);
 
   const copyClientUrl = (token: string) => {
@@ -88,8 +99,12 @@ export default function AdminDashboardPage() {
   return (
     <div className="flex-1 flex flex-col">
       <AdminTopNav
-        title="Photographer Dashboard"
-        description="Overview of client photo proofing galleries, status, and pending selections."
+        title={currentUser?.name ? `Dashboard — Galeri ${currentUser.name}` : "Photographer Dashboard"}
+        description={
+          currentUser?.name
+            ? `Selamat datang kembali, ${currentUser.name}! Kelola galeri photoshoot dan pantau seleksi foto klien Anda.`
+            : "Overview of client photo proofing galleries, status, and pending selections."
+        }
         actionLabel="Create Gallery"
         actionHref="/admin/galleries/new"
       />
@@ -139,7 +154,7 @@ export default function AdminDashboardPage() {
         <section className="bg-[#114234] rounded-2xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden shadow-md">
           <div className="relative z-10 max-w-xl">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[#1b5645] text-[#bef238] border border-[#2b6553] mb-3">
-              Google Drive Workflow
+              {currentUser?.name ? `Studio Galeri ${currentUser.name}` : "Google Drive Workflow"}
             </span>
             <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
               Ready to create a new client proofing gallery?
