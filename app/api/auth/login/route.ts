@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     if (!rl.allowed) {
       return NextResponse.json(
         {
-          error: `Too many login attempts. Please try again in ${rl.resetInSecs} seconds.`,
+          error: `Terlalu banyak percobaan login yang gagal. Demi keamanan, silakan coba lagi dalam ${rl.resetInSecs} detik.`,
         },
         {
           status: 429,
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     // ── Parse & validate ───────────────────────────────────────────────────
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object") {
-      return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+      return NextResponse.json({ error: "Permintaan tidak valid." }, { status: 400 });
     }
 
     const { email, password } = body as { email?: string; password?: string };

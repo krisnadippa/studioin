@@ -11,7 +11,7 @@ export async function GET(
   const gallery = await db.getGalleryByToken(token);
 
   if (!gallery) {
-    return NextResponse.json({ error: "Gallery not found or invalid link." }, { status: 404 });
+    return NextResponse.json({ error: "Galeri foto tidak ditemukan. Silakan periksa kembali tautan link Anda atau hubungi fotografer." }, { status: 404 });
   }
 
   // Check if gallery is expired
@@ -74,6 +74,7 @@ export async function GET(
       event_name: gallery.event_name,
       event_date: gallery.event_date,
       status: gallery.status,
+      error_message: gallery.error_message,
       total_photos: gallery.total_photos || photos.length,
       expires_at: gallery.expires_at,
       has_pin: gallery.has_pin,

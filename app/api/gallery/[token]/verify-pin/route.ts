@@ -11,7 +11,7 @@ export async function POST(
   const gallery = await db.getGalleryByToken(token);
 
   if (!gallery) {
-    return NextResponse.json({ error: "Gallery not found." }, { status: 404 });
+    return NextResponse.json({ error: "Galeri foto tidak ditemukan atau tautan sudah tidak aktif." }, { status: 404 });
   }
 
   try {
@@ -19,12 +19,12 @@ export async function POST(
     const { pin } = body;
 
     if (!pin) {
-      return NextResponse.json({ error: "PIN is required." }, { status: 400 });
+      return NextResponse.json({ error: "Kode PIN wajib diisi." }, { status: 400 });
     }
 
     const isValid = await GalleryService.verifyPin(gallery, pin);
     if (!isValid) {
-      return NextResponse.json({ error: "Incorrect PIN. Please try again." }, { status: 401 });
+      return NextResponse.json({ error: "Kode PIN yang Anda masukkan salah. Silakan periksa kembali kode PIN dari fotografer Anda." }, { status: 401 });
     }
 
     // Set verified cookie
@@ -39,6 +39,6 @@ export async function POST(
 
     return NextResponse.json({ success: true });
   } catch {
-    return NextResponse.json({ error: "PIN verification failed." }, { status: 500 });
+    return NextResponse.json({ error: "Gagal memverifikasi kode PIN. Silakan coba lagi." }, { status: 500 });
   }
 }

@@ -135,12 +135,13 @@ export default function GalleryDetailPage({
         if (data.photos) {
           setPhotos(data.photos);
         }
-        showToast(`Google Drive synced successfully! (${data.photos?.length || 0} photos)`);
+        showToast(`Google Drive berhasil disinkronkan! (${data.photos?.length || 0} foto)`);
       } else {
-        showToast("Failed to re-sync photos from Google Drive.", "error");
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData.error || "Gagal menyinkronkan foto dari Google Drive.", "error");
       }
     } catch {
-      showToast("An error occurred while syncing with Google Drive.", "error");
+      showToast("Terjadi kendala koneksi saat menyinkronkan Google Drive. Silakan coba lagi.", "error");
     } finally {
       setIsSyncingDrive(false);
     }

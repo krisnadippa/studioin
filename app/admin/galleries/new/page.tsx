@@ -68,8 +68,13 @@ export default function NewGalleryPage() {
     e.preventDefault();
     setError(null);
 
+    if (!clientName.trim() || !eventName.trim() || !driveUrl.trim()) {
+      setError("Nama Klien, Nama Acara, dan Link Folder Google Drive wajib diisi.");
+      return;
+    }
+
     if (!validateDriveUrl(driveUrl)) {
-      setError("Please provide a valid Google Drive folder URL (e.g., https://drive.google.com/drive/folders/xxxxx)");
+      setError("Link Google Drive tidak valid. Masukkan URL folder Google Drive yang benar (contoh: https://drive.google.com/drive/folders/xxxxx)");
       return;
     }
 
@@ -105,7 +110,7 @@ export default function NewGalleryPage() {
         if (data.error === "ACCOUNT_RESTRICTED" || data.error === "GALLERY_LIMIT_REACHED") {
           throw new Error(`RESTRICTION:${data.message}`);
         }
-        throw new Error(data.error || "Failed to create gallery");
+        throw new Error(data.error || "Gagal membuat galeri.");
       }
 
       const count = data.gallery?.total_photos || 0;
@@ -122,7 +127,7 @@ export default function NewGalleryPage() {
         router.push(`/admin/galleries/${data.gallery.id}`);
       }, 700);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "An error occurred";
+      const msg = err instanceof Error ? err.message : "Terjadi kendala saat membuat galeri.";
       if (msg.startsWith("RESTRICTION:")) {
         setError(`__RESTRICTION__${msg.slice(12)}`);
       } else {

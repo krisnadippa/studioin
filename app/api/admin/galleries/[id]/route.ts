@@ -122,6 +122,8 @@ export async function PATCH(
         updated = await db.getGalleryById(id, user.userId);
       } catch (err) {
         console.error("[Gallery Resync Error]", err);
+        const errMsg = err instanceof Error ? err.message : "Gagal menyinkronkan foto dari Google Drive.";
+        return NextResponse.json({ error: errMsg }, { status: 400 });
       }
     }
   }

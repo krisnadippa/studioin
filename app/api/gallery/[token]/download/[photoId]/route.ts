@@ -10,7 +10,7 @@ export async function GET(
   // 1. Get and validate the gallery
   const gallery = await db.getGalleryByToken(token);
   if (!gallery) {
-    return NextResponse.json({ error: "Gallery not found." }, { status: 404 });
+    return NextResponse.json({ error: "Galeri foto tidak ditemukan." }, { status: 404 });
   }
 
   // 2. Check if gallery is expired
@@ -18,19 +18,19 @@ export async function GET(
   const expTime = new Date(gallery.expires_at).getTime();
   const isExpired = gallery.status === "expired" || now > expTime;
   if (isExpired) {
-    return NextResponse.json({ error: "This gallery has expired." }, { status: 403 });
+    return NextResponse.json({ error: "Masa aktif galeri foto ini telah berakhir." }, { status: 403 });
   }
 
   // 3. Check if downloads are allowed
   if (!gallery.allow_download) {
-    return NextResponse.json({ error: "Downloads are disabled for this gallery." }, { status: 403 });
+    return NextResponse.json({ error: "Fitur unduh foto dinonaktifkan oleh fotografer untuk galeri ini." }, { status: 403 });
   }
 
   // 4. Retrieve the photo
   const photos = await db.getPhotosByGalleryId(gallery.id);
   const photo = photos.find((p) => p.id === photoId);
   if (!photo) {
-    return NextResponse.json({ error: "Photo not found." }, { status: 404 });
+    return NextResponse.json({ error: "Foto tidak ditemukan." }, { status: 404 });
   }
 
   // 5. Perform the secure download from Google Drive or Fallback Mock url
@@ -76,5 +76,5 @@ export async function GET(
     console.error("[Mock Download Fallback Exception]", err);
   }
 
-  return NextResponse.json({ error: "Failed to download file." }, { status: 500 });
+  return NextResponse.json({ error: "Gagal mengunduh foto dari Google Drive. Pastikan folder Drive dapat diakses publik atau coba beberapa saat lagi." }, { status: 500 });
 }

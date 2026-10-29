@@ -18,14 +18,14 @@ import {
 
 // ─── Client-side field validation (mirrors server-side rules) ────────────────
 function validateEmail(email: string): string | null {
-  if (!email.trim()) return "Email is required.";
+  if (!email.trim()) return "Email wajib diisi.";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()))
-    return "Enter a valid email address.";
+    return "Format email tidak valid (contoh: nama@domain.com).";
   return null;
 }
 
 function validatePassword(password: string): string | null {
-  if (!password) return "Password is required.";
+  if (!password) return "Kata sandi wajib diisi.";
   return null;
 }
 
@@ -131,7 +131,7 @@ export default function AdminLoginPage() {
       if (!res.ok) {
         if (data.fieldErrors?.email) setEmailError(data.fieldErrors.email);
         if (data.fieldErrors?.password) setPasswordError(data.fieldErrors.password);
-        throw new Error(data.error || "Sign-in failed.");
+        throw new Error(data.error || "Gagal masuk. Silakan periksa kembali email dan kata sandi Anda.");
       }
 
       setLoggedInName(data.name || null);
@@ -145,7 +145,7 @@ export default function AdminLoginPage() {
         router.refresh();
       }, 1000);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "An error occurred.";
+      const msg = err instanceof Error ? err.message : "Terjadi kendala saat proses masuk. Silakan coba beberapa saat lagi.";
       setServerError(msg);
       setLoading(false);
     }

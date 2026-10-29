@@ -58,10 +58,13 @@ export function GalleryImage({
 
   if (hasFailed || !currentSrc) {
     return (
-      <div className={`w-full h-full flex flex-col items-center justify-center bg-zinc-900/90 text-zinc-400 p-3 select-none ${className}`}>
+      <div className={`w-full h-full flex flex-col items-center justify-center bg-zinc-900/90 text-zinc-400 p-3 select-none text-center ${className}`}>
         <ImageOff className="w-5 h-5 mb-1.5 text-zinc-500" />
-        <span className="text-[10px] font-mono text-zinc-400 truncate max-w-full text-center px-1">
-          {alt || "Photo"}
+        <span className="text-[10px] font-mono text-zinc-300 truncate max-w-full px-1">
+          {alt || "Foto"}
+        </span>
+        <span className="text-[9px] text-zinc-500 mt-0.5 line-clamp-2 px-1">
+          Gagal memuat foto (periksa izin Google Drive)
         </span>
       </div>
     );

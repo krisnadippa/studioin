@@ -83,7 +83,7 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
   async listFiles(folderId: string, limit: number = 1000): Promise<DriveFileMetadata[]> {
     const apiKey = this.getApiKey();
     if (!apiKey) {
-      throw new Error("GOOGLE_DRIVE_API_KEY belum dikonfigurasi di environment server (.env.local / Vercel).");
+      throw new Error("Layanan Google Drive belum dikonfigurasi di server (GOOGLE_DRIVE_API_KEY). Silakan hubungi admin sistem.");
     }
 
     let allFiles: any[] = [];
@@ -104,11 +104,11 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
         console.error(`[GoogleDrive API listFiles Error] Status: ${res.status}`, errData);
         if (res.status === 404 || res.status === 403) {
           throw new Error(
-            "Folder Google Drive tidak ditemukan atau belum diset ke 'Siapa saja yang memiliki link dapat melihat' (Anyone with the link can view). Silakan periksa izin sharing folder di Google Drive."
+            "Folder Google Drive tidak dapat diakses atau masih berstatus Privat. Mohon buka Google Drive, klik Bagikan (Share), lalu ubah akses menjadi 'Siapa saja yang memiliki link' (Anyone with the link can view)."
           );
         }
         throw new Error(
-          `Google Drive API Error: ${errData?.error?.message || `HTTP ${res.status} ${res.statusText}`}`
+          `Gagal mengakses Google Drive (${errData?.error?.message || `HTTP ${res.status} ${res.statusText}`}). Pastikan link folder Google Drive benar dan dapat diakses publik.`
         );
       }
 

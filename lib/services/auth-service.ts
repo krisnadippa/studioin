@@ -95,8 +95,8 @@ export class AuthService {
     if (exists) {
       return {
         success: false,
-        error: "An account with this email already exists.",
-        fieldErrors: { email: "An account with this email already exists." },
+        error: "Email ini sudah terdaftar. Silakan gunakan email lain atau masuk ke akun Anda.",
+        fieldErrors: { email: "Email ini sudah terdaftar." },
       };
     }
 
@@ -131,16 +131,28 @@ export class AuthService {
   ): Promise<AuthResult & { token?: string; role?: "superadmin" | "admin"; name?: string }> {
     const admin = await db.getAdminByEmail(email.trim());
 
-    // Use constant-time comparison by always calling verifyPassword
-    // to prevent user enumeration via timing attacks.
-    const DUMMY_HASH =
-      "$2b$12$invalidsaltthatwillnevermatchanyrealpassword000000000000";
-    const isValid = admin
-      ? await this.verifyPassword(password, admin.password_hash)
-      : await this.verifyPassword(password, DUMMY_HASH).then(() => false);
+    if (!admin) {
+      return {
+        success: false,
+        error: "Email tidak terdaftar. Silakan periksa kembali email Anda atau buat akun baru.",
+        fieldErrors: { email: "Email tidak terdaftar." },
+      };
+    }
 
-    if (!admin || !isValid) {
-      return { success: false, error: "Invalid email or password." };
+    if (admin.is_restricted) {
+      return {
+        success: false,
+        error: "Akun Anda saat ini dibatasi oleh administrator. Silakan hubungi admin Studioin.",
+      };
+    }
+
+    const isValid = await this.verifyPassword(password, admin.password_hash);
+    if (!isValid) {
+      return {
+        success: false,
+        error: "Kata sandi yang Anda masukkan salah. Silakan periksa dan coba lagi.",
+        fieldErrors: { password: "Kata sandi salah." },
+      };
     }
 
     const token = await this.createToken({

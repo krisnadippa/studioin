@@ -64,29 +64,29 @@ function getRequirements(p: string): Requirements {
 }
 
 function validateEmail(email: string): string | null {
-  if (!email.trim()) return "Email is required.";
+  if (!email.trim()) return "Email wajib diisi.";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()))
-    return "Enter a valid email address.";
+    return "Format email tidak valid (contoh: nama@domain.com).";
   return null;
 }
 
 function validateName(name: string): string | null {
-  if (!name.trim()) return "Full name is required.";
-  if (name.trim().length < 2) return "Name must be at least 2 characters.";
+  if (!name.trim()) return "Nama lengkap wajib diisi.";
+  if (name.trim().length < 2) return "Nama lengkap minimal 2 karakter.";
   return null;
 }
 
 function validatePassword(password: string): string | null {
   const reqs = getRequirements(password);
-  if (!password) return "Password is required.";
+  if (!password) return "Kata sandi wajib diisi.";
   if (!reqs.length || !reqs.upper || !reqs.lower || !reqs.digit || !reqs.special)
-    return "Password does not meet the requirements below.";
+    return "Kata sandi belum memenuhi kriteria keamanan di bawah.";
   return null;
 }
 
 function validateConfirmPassword(pw: string, cpw: string): string | null {
-  if (!cpw) return "Please confirm your password.";
-  if (pw !== cpw) return "Passwords do not match.";
+  if (!cpw) return "Konfirmasi kata sandi wajib diisi.";
+  if (pw !== cpw) return "Konfirmasi kata sandi tidak cocok.";
   return null;
 }
 
@@ -239,7 +239,7 @@ export default function AdminRegisterPage() {
         if (data.fieldErrors?.email) setEmailError(data.fieldErrors.email);
         if (data.fieldErrors?.password) setPasswordError(data.fieldErrors.password);
         if (data.fieldErrors?.confirmPassword) setConfirmError(data.fieldErrors.confirmPassword);
-        throw new Error(data.error || "Registration failed.");
+        throw new Error(data.error || "Pendaftaran akun gagal. Silakan periksa kembali data Anda.");
       }
 
       setSuccess(true);
@@ -248,7 +248,7 @@ export default function AdminRegisterPage() {
         router.refresh();
       }, 1000);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "An error occurred.";
+      const msg = err instanceof Error ? err.message : "Terjadi kendala saat pendaftaran. Silakan coba lagi.";
       setServerError(msg);
       setLoading(false);
     }

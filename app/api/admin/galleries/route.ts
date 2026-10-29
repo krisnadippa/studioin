@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: "ACCOUNT_RESTRICTED",
-          message: "Your account has been restricted by the administrator. You cannot create new galleries at this time. Please contact the administrator for more information.",
+          message: "Akun Anda saat ini sedang dibatasi oleh administrator sehingga tidak dapat membuat galeri baru. Silakan hubungi admin sistem.",
         },
         { status: 403 }
       );
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             error: "GALLERY_LIMIT_REACHED",
-            message: `You have reached your gallery creation limit of ${adminUser.gallery_limit} galleries. Please contact the administrator to increase your limit.`,
+            message: `Anda telah mencapai batas maksimal pembuatan galeri (${adminUser.gallery_limit} galeri). Silakan hubungi administrator untuk menambah kuota akun Anda.`,
           },
           { status: 403 }
         );
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
 
     if (!client_name || !event_name || !drive_folder_url) {
       return NextResponse.json(
-        { error: "Client Name, Event Name, and Google Drive Folder URL are required." },
+        { error: "Nama Klien, Nama Acara, dan Link Folder Google Drive wajib diisi." },
         { status: 400 }
       );
     }
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, gallery });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to create gallery";
+    const msg = err instanceof Error ? err.message : "Gagal membuat galeri baru.";
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

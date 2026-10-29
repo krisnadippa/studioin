@@ -10,14 +10,14 @@ export async function POST(
   const gallery = await db.getGalleryByToken(token);
 
   if (!gallery) {
-    return NextResponse.json({ error: "Gallery not found." }, { status: 404 });
+    return NextResponse.json({ error: "Galeri foto tidak ditemukan." }, { status: 404 });
   }
 
   const now = Date.now();
   const expTime = new Date(gallery.expires_at).getTime();
   if (gallery.status === "expired" || now > expTime) {
     return NextResponse.json(
-      { error: "This gallery has expired. Please contact the photographer." },
+      { error: "Masa aktif galeri foto ini telah berakhir. Silakan hubungi fotografer Anda." },
       { status: 403 }
     );
   }
@@ -28,7 +28,7 @@ export async function POST(
 
     if (!selected_photo_ids || !Array.isArray(selected_photo_ids) || selected_photo_ids.length === 0) {
       return NextResponse.json(
-        { error: "Please select at least one photo." },
+        { error: "Silakan pilih minimal 1 foto sebelum mengirim pilihan." },
         { status: 400 }
       );
     }
@@ -43,7 +43,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, selection });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to submit selection.";
+    const msg = err instanceof Error ? err.message : "Gagal menyimpan pilihan foto.";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

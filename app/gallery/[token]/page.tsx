@@ -30,6 +30,7 @@ interface PublicGallery {
   event_name: string;
   event_date: string;
   status: string;
+  error_message?: string;
   total_photos: number;
   expires_at: string;
   has_pin: boolean;
@@ -131,7 +132,7 @@ export default function ClientGalleryPage({
       const data = await res.json();
 
       if (data.expired) {
-        setError("This gallery has expired. Please contact the photographer if you need access again.");
+        setError("Masa aktif galeri foto ini telah berakhir. Silakan hubungi fotografer Anda jika Anda masih membutuhkan akses.");
         setLoading(false);
         return;
       }
@@ -144,7 +145,7 @@ export default function ClientGalleryPage({
       }
 
       if (!res.ok) {
-        throw new Error(data.error || "Gallery not found");
+        throw new Error(data.error || "Galeri foto tidak ditemukan atau tautan sudah tidak aktif.");
       }
 
       setGallery(data.gallery);
@@ -177,7 +178,7 @@ export default function ClientGalleryPage({
         } catch {}
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to load gallery";
+      const msg = err instanceof Error ? err.message : "Gagal memuat galeri foto.";
       setError(msg);
     } finally {
       setLoading(false);
@@ -245,7 +246,7 @@ export default function ClientGalleryPage({
     });
 
     if (limitExceeded && gallery) {
-      showLimitToast(`Limit selections reached (${gallery.max_selections} photos). Please unselect another photo first.`);
+      showLimitToast(`Batas maksimal pilihan foto telah tercapai (${gallery.max_selections} foto). Silakan batalkan centang salah satu foto jika ingin memilih foto lain.`);
     }
   };
 
@@ -287,12 +288,12 @@ export default function ClientGalleryPage({
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Incorrect PIN. Please try again.");
+        throw new Error(data.error || "Kode PIN yang Anda masukkan salah. Silakan coba lagi.");
       }
 
       fetchGallery();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Invalid PIN";
+      const msg = err instanceof Error ? err.message : "Kode PIN salah";
       setPinError(msg);
       setPinSubmitting(false);
       // Clear OTP on error and auto-focus first box
@@ -378,14 +379,14 @@ export default function ClientGalleryPage({
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Submission failed");
+        throw new Error(data.error || "Gagal mengirimkan pilihan foto.");
       }
 
       setSubmitted(true);
       setShowSubmitModal(false);
       fetchGallery();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Submission error");
+      alert(err instanceof Error ? err.message : "Terjadi kendala saat mengirim pilihan foto.");
     } finally {
       setSubmitting(false);
     }
@@ -424,7 +425,7 @@ export default function ClientGalleryPage({
       <div className="min-h-screen bg-[#114234] text-white flex flex-col items-center justify-center p-6 text-center">
         <div className="max-w-md w-full bg-[#0e382b] border border-emerald-800/60 p-8 rounded-3xl shadow-2xl space-y-4">
           <Clock className="w-12 h-12 text-[#bef238] mx-auto" />
-          <h1 className="text-2xl font-bold text-white tracking-tight">Gallery Expired or Unavailable</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Galeri Tidak Tersedia</h1>
           <p className="text-xs sm:text-sm text-emerald-200/80 leading-relaxed">
             {error}
           </p>
@@ -433,7 +434,7 @@ export default function ClientGalleryPage({
               href="/"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#bef238] text-[#114234] font-bold text-xs shadow-md"
             >
-              <span>Visit Studioin Homepage</span>
+              <span>Kembali ke Beranda Studioin</span>
             </Link>
           </div>
         </div>
@@ -460,13 +461,13 @@ export default function ClientGalleryPage({
 
             <div>
               <span className="text-xs font-semibold text-[#bef238] uppercase tracking-wider block mb-1">
-                Protected Client Gallery
+                Galeri Foto Terproteksi
               </span>
               <h1 className="text-2xl font-extrabold text-white tracking-tight">
-                {gallery?.client_name || "Client Gallery"}
+                {gallery?.client_name || "Galeri Klien"}
               </h1>
               <p className="text-xs text-emerald-200/80 mt-1.5 leading-relaxed">
-                Please enter the {pinLength}-digit PIN provided by your photographer to access your photos.
+                Silakan masukkan {pinLength} digit kode PIN yang diberikan oleh fotografer Anda untuk melihat foto-foto ini.
               </p>
             </div>
 
@@ -502,7 +503,7 @@ export default function ClientGalleryPage({
                   onClick={() => setPinLength(pinLength === 4 ? 6 : 4)}
                   className="text-xs text-emerald-400 hover:text-[#bef238] underline transition-colors cursor-pointer"
                 >
-                  {pinLength === 4 ? "PIN has 6 digits?" : "PIN has 4 digits?"}
+                  {pinLength === 4 ? "PIN 6 digit?" : "PIN 4 digit?"}
                 </button>
                 
                 {otp.some(d => d !== "") && (
@@ -511,7 +512,7 @@ export default function ClientGalleryPage({
                     onClick={() => setOtp(Array(pinLength).fill(""))}
                     className="text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
                   >
-                    Clear
+                    Hapus
                   </button>
                 )}
               </div>
@@ -519,15 +520,15 @@ export default function ClientGalleryPage({
               <button
                 type="submit"
                 disabled={pinSubmitting || otp.some(digit => digit === "")}
-                className="w-full py-3.5 bg-[#bef238] hover:bg-[#b2e82e] text-[#114234] font-bold text-sm rounded-xl transition-all shadow-md active:scale-98 disabled:opacity-40 disabled:pointer-events-none"
+                className="w-full py-3.5 bg-[#bef238] hover:bg-[#b2e82e] text-[#114234] font-bold text-sm rounded-xl transition-all shadow-md active:scale-98 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
               >
                 {pinSubmitting ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Verifying PIN...
+                    Memverifikasi PIN...
                   </span>
                 ) : (
-                  "Open Gallery"
+                  "Buka Galeri"
                 )}
               </button>
             </form>
@@ -724,19 +725,21 @@ export default function ClientGalleryPage({
               <>
                 <CheckSquare className="w-12 h-12 text-zinc-300 mx-auto mb-3" />
                 <h3 className="text-base font-bold text-zinc-800">
-                  {activeFilter === "selected" ? "No photos selected yet" : "No photos available"}
+                  {activeFilter === "selected" ? "Belum ada foto yang dipilih" : "Foto Belum Tersedia"}
                 </h3>
-                <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 mb-4">
+                <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
                   {activeFilter === "selected"
-                    ? "Select photos from the gallery to create your final selection list."
-                    : "Photos are currently being processed by the photographer."}
+                    ? "Pilih foto favorit Anda dari galeri untuk membuat daftar pilihan final."
+                    : gallery?.error_message
+                    ? gallery.error_message
+                    : "Foto sedang disiapkan oleh fotografer atau sinkronisasi folder Google Drive sedang berjalan. Silakan muat ulang halaman beberapa saat lagi."}
                 </p>
                 {activeFilter === "selected" && (
                   <button
                     onClick={() => setActiveFilter("all")}
                     className="px-4 py-2 bg-[#114234] text-white text-xs font-bold rounded-xl"
                   >
-                    Browse All Photos
+                    Lihat Semua Foto
                   </button>
                 )}
               </>

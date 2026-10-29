@@ -34,7 +34,7 @@ export class GalleryService {
   static async createGallery(input: CreateGalleryInput): Promise<Gallery> {
     const folderId = googleDriveService.parseFolderId(input.drive_folder_url);
     if (!folderId) {
-      throw new Error("Invalid Google Drive folder URL or ID. Please check the link.");
+      throw new Error("Link folder Google Drive tidak valid. Pastikan link berformat URL folder Google Drive yang benar (contoh: https://drive.google.com/drive/folders/xxxxx).");
     }
 
     const now = new Date();
@@ -82,6 +82,9 @@ export class GalleryService {
       await this.processGalleryInBackground(newGallery.id, folderId);
     } catch (err) {
       console.error(`[GalleryService] Initial Drive sync failed for ${newGallery.id}:`, err);
+      // Clean up failed gallery record so user can fix Google Drive settings and retry
+      await db.deleteGallery(newGallery.id);
+      throw err;
     }
 
     const readyGallery = await db.getGalleryById(newGallery.id);
@@ -98,6 +101,11 @@ export class GalleryService {
 
       // Fetch files metadata from Drive
       const driveFiles = await googleDriveService.listFiles(driveFolderId, 1000);
+      if (driveFiles.length === 0) {
+        throw new Error(
+          "Folder Google Drive berhasil diakses, namun tidak ditemukan file foto/gambar di dalamnya. Pastikan folder berisi foto berformat JPG, PNG, atau WEBP."
+        );
+      }
       const total = driveFiles.length;
 
       const photos: Photo[] = [];
@@ -135,7 +143,7 @@ export class GalleryService {
 
       return photos;
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Unable to process Google Drive folder";
+      const errorMessage = err instanceof Error ? err.message : "Gagal memproses folder Google Drive";
       await db.updateGallery(galleryId, {
         status: "failed",
         error_message: errorMessage,

@@ -12,7 +12,7 @@ export interface SubmitSelectionInput {
 export class SelectionService {
   static async submitSelection(input: SubmitSelectionInput): Promise<Selection> {
     if (!input.selected_photo_ids || input.selected_photo_ids.length === 0) {
-      throw new Error("Please select at least one photo before submitting.");
+      throw new Error("Silakan pilih minimal 1 foto sebelum mengirim pilihan.");
     }
 
     return db.updateSelectionsByGalleryId(input.gallery_id, input.selected_photo_ids, {
