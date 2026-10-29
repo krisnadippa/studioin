@@ -10,16 +10,16 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://studioin.com"),
-  title: "Studioin — Impact Through Creativity",
-  description: "Every act of creativity brings innovation, design, and inspiration to professional teams and creators who need it most.",
+  title: "Studioin — Platform Galeri & Proofing Foto Klien untuk Fotografer & Studio",
+  description: "Kirim galeri foto photoshoot ke klien dengan mudah melalui integrasi Google Drive, proteksi kode PIN, dan kurasi foto interaktif tanpa ribet.",
   icons: {
     icon: "/images/logosihitam.png",
     shortcut: "/images/logosihitam.png",
     apple: "/images/logosihitam.png",
   },
   openGraph: {
-    title: "Studioin — Impact Through Creativity",
-    description: "Every act of creativity brings innovation, design, and inspiration to professional teams and creators who need it most.",
+    title: "Studioin — Platform Galeri & Proofing Foto Klien untuk Fotografer & Studio",
+    description: "Kirim galeri foto photoshoot ke klien dengan mudah melalui integrasi Google Drive, proteksi kode PIN, dan kurasi foto interaktif tanpa ribet.",
     url: "https://studioin.com",
     siteName: "Studioin",
     images: [
@@ -34,8 +34,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: "Studioin — Impact Through Creativity",
-    description: "Every act of creativity brings innovation, design, and inspiration to professional teams and creators who need it most.",
+    title: "Studioin — Platform Galeri & Proofing Foto Klien untuk Fotografer & Studio",
+    description: "Kirim galeri foto photoshoot ke klien dengan mudah melalui integrasi Google Drive, proteksi kode PIN, dan kurasi foto interaktif tanpa ribet.",
     images: ["/images/logosihitam.png"],
   },
 };
@@ -46,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${plusJakartaSans.variable} h-full antialiased`}>
+    <html lang="id" className={`${plusJakartaSans.variable} h-full antialiased`}>
       <body className="min-h-full bg-white text-zinc-900 font-sans">{children}</body>
     </html>
   );

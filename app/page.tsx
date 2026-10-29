@@ -27,32 +27,32 @@ interface ServiceItem {
 
 const services: ServiceItem[] = [
   {
-    id: "green-energy",
-    title: "Green Energy Solutions",
-    description: "Clean energy insights to help you adopt efficient, renewable systems.",
+    id: "gdrive-sync",
+    title: "Sinkronisasi Google Drive Instan",
+    description: "Cukup tempel tautan folder Google Drive. Ratusan foto photoshoot terindeks otomatis ke galeri klien berkecepatan tinggi tanpa membebani server.",
     image: "/images/service-green-energy.jpg",
-    alt: "Green Energy Solar and Wind Solutions",
+    alt: "Sinkronisasi Google Drive Instan Studioin",
   },
   {
-    id: "sustainability",
-    title: "Sustainability Advisory",
-    description: "Expert guidance to strengthen ESG performance and responsible practices.",
+    id: "client-selection",
+    title: "Kurasi & Seleksi Foto Interaktif",
+    description: "Klien dapat memilih foto favorit dan memberikan catatan khusus langsung dari smartphone atau laptop dengan tampilan visual modern tanpa install aplikasi.",
     image: "/images/service-sustainability.jpg",
-    alt: "Sustainability Advisory Foliage",
+    alt: "Kurasi dan Seleksi Foto Klien Interaktif",
   },
   {
-    id: "net-zero",
-    title: "Net-Zero Strategy",
-    description: "Strategic planning to reduce emissions and guide long-term net-zero goals.",
+    id: "pin-security",
+    title: "Keamanan PIN & Akses Eksklusif",
+    description: "Jaga privasi sesi pemotretan klien dengan perlindungan kode PIN 4-6 digit serta tautan token akses terenkripsi yang aman.",
     image: "/images/service-net-zero.jpg",
-    alt: "Net-Zero Strategy Sustainable Architecture",
+    alt: "Proteksi PIN dan Keamanan Galeri Klien",
   },
   {
-    id: "climate-assessment",
-    title: "Climate Assessment",
-    description: "Comprehensive analysis of climate risks to support resilient decisions.",
+    id: "expiry-limit",
+    title: "Batas Kuota & Auto-Expiry Galeri",
+    description: "Tentukan batas kuota jumlah foto yang boleh dipilih sesuai paket layanan, serta tanggal kedaluwarsa otomatis agar alur kerja editing tepat waktu.",
     image: "/images/service-climate.jpg",
-    alt: "Climate Assessment Coastal Landscape",
+    alt: "Batas Kuota Foto dan Kedaluwarsa Otomatis",
   },
 ];
 
@@ -131,7 +131,7 @@ const brandLogos = [
   },
 ];
 
-const missionStatement = "Our mission is to support forward thinking organizations with sustainability consulting, climate focused strategies, and actionable insights that strengthen resilience, accelerate transformation, and create a more responsible future for people and planet.";
+const missionStatement = "Studioin hadir memberdayakan para fotografer dan studio kreatif di Indonesia dengan platform proofing foto yang cepat, elegan, dan aman—menghilangkan kerepotan kurasi manual dan menghadirkan pengalaman berkelas bagi setiap klien.";
 
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -257,7 +257,7 @@ export default function Home() {
         duration: 0.9,
         ease: "power3.out",
         scrollTrigger: {
-          trigger: "#services",
+          trigger: "#features",
           start: "top 80%",
         },
       });
@@ -363,34 +363,34 @@ export default function Home() {
             {/* Desktop Nav Links */}
             <nav className="hidden md:flex items-center gap-8 lg:gap-10 text-[15px] font-medium">
               <Link
-                href="#campaigns"
+                href="#features"
                 className="text-[#d5e5dd] hover:text-white transition-colors duration-150"
               >
-                Campaigns
+                Fitur Utama
               </Link>
               <Link
                 href="#about"
                 className="text-[#d5e5dd] hover:text-white transition-colors duration-150"
               >
-                About Us
+                Tentang
               </Link>
               <Link
-                href="#how-it-works"
+                href="#portal"
                 className="text-[#d5e5dd] hover:text-white transition-colors duration-150"
               >
-                How It Works
+                Alur Kerja
               </Link>
               <Link
-                href="#services"
+                href="#features"
                 className="text-[#d5e5dd] hover:text-white transition-colors duration-150"
               >
-                Resources
+                Keunggulan
               </Link>
               <Link
                 href="#contact"
                 className="text-[#bef238] font-semibold hover:text-[#d3f95e] transition-colors duration-150"
               >
-                Contact
+                Kontak
               </Link>
             </nav>
 
@@ -400,13 +400,13 @@ export default function Home() {
                 href="/admin/login"
                 className="hidden sm:inline-flex text-[14px] font-semibold text-emerald-100 hover:text-white transition-colors px-3 py-1.5"
               >
-                Sign In
+                Masuk
               </Link>
               <Link
                 href="/admin/register"
                 className="group hidden sm:inline-flex items-center gap-2 pl-4 pr-1.5 py-1.5 rounded-full border border-[#2b6553] bg-[#0e372b]/60 hover:bg-[#154e3d] hover:border-[#387e68] transition-all duration-200 text-[14px] font-medium text-white shadow-sm"
               >
-                <span>Register</span>
+                <span>Daftar Gratis</span>
                 <span className="w-6 h-6 rounded-full bg-[#bef238] text-[#114234] flex items-center justify-center transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
                   <ArrowRight className="w-3.5 h-3.5" />
                 </span>
@@ -432,15 +432,16 @@ export default function Home() {
           {/* Mobile Dropdown */}
           {mobileMenuOpen && (
             <div className="md:hidden flex flex-col gap-3 pt-5 pb-5 border-t border-emerald-800/40 mt-3 text-[15px] font-medium">
-              <Link href="#campaigns" className="text-emerald-100 hover:text-white py-1">Campaigns</Link>
-              <Link href="#about" className="text-emerald-100 hover:text-white py-1">About Us</Link>
-              <Link href="#services" className="text-emerald-100 hover:text-white py-1">Resources</Link>
-              <Link href="/admin/login" className="text-emerald-100 hover:text-white py-1">Sign In</Link>
+              <Link href="#features" className="text-emerald-100 hover:text-white py-1">Fitur Utama</Link>
+              <Link href="#about" className="text-emerald-100 hover:text-white py-1">Tentang</Link>
+              <Link href="#portal" className="text-emerald-100 hover:text-white py-1">Alur Kerja</Link>
+              <Link href="#features" className="text-emerald-100 hover:text-white py-1">Keunggulan</Link>
+              <Link href="/admin/login" className="text-emerald-100 hover:text-white py-1">Masuk</Link>
               <Link
                 href="/admin/register"
                 className="inline-flex items-center justify-between px-4 py-2.5 rounded-full bg-[#bef238] text-[#114234] font-semibold mt-2"
               >
-                <span>Create Gallery / Register</span>
+                <span>Buat Galeri / Daftar Gratis</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -450,23 +451,23 @@ export default function Home() {
           <div className="pt-8 sm:pt-10 md:pt-12 pb-6 sm:pb-8 flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-10">
             {/* Left: Giant Bold Headline */}
             <div className="hero-headline flex-1 max-w-full lg:max-w-3xl">
-              <h1 className="text-[36px] xs:text-[42px] sm:text-5xl md:text-[54px] lg:text-[62px] xl:text-[70px] font-extrabold tracking-[-0.035em] text-white leading-[1.06]">
-                <span className="block">Impact</span>
-                <span className="block whitespace-nowrap">Through Creativity</span>
+              <h1 className="text-[34px] xs:text-[40px] sm:text-5xl md:text-[52px] lg:text-[60px] xl:text-[68px] font-extrabold tracking-[-0.035em] text-white leading-[1.08]">
+                <span className="block">Kurasi Foto Klien,</span>
+                <span className="block text-[#bef238]">Lebih Cepat & Berkelas.</span>
               </h1>
             </div>
 
             {/* Right: Copy & CTA Button */}
-            <div className="hero-copy flex flex-col items-start md:items-end text-left md:text-right gap-5 md:gap-6 max-w-[420px]">
+            <div className="hero-copy flex flex-col items-start md:items-end text-left md:text-right gap-5 md:gap-6 max-w-[440px]">
               <p className="text-[#d2e4dc] text-[15px] sm:text-base md:text-[16px] leading-relaxed font-normal">
-                Every act of creativity brings innovation, design, and inspiration to professional teams and creators who need it most.
+                Platform proofing foto modern untuk fotografer dan studio foto. Cukup tautkan Google Drive, amankan dengan kode PIN, dan biarkan klien memilih foto favorit langsung dari ponsel mereka.
               </p>
 
               <Link
                 href="/admin/register"
                 className="group inline-flex items-center gap-3 bg-[#bef238] hover:bg-[#b2e82e] text-[#114234] font-bold text-[15px] sm:text-base pl-6 pr-2.5 py-2.5 rounded-full transition-all duration-200 shadow-md hover:shadow-lime-500/20 active:scale-98"
               >
-                <span>Create Gallery</span>
+                <span>Mulai Buat Galeri</span>
                 <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#114234] text-[#bef238] flex items-center justify-center transition-transform group-hover:translate-x-0.5">
                   <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </span>
@@ -478,7 +479,7 @@ export default function Home() {
           <div className="hero-image-card relative w-full h-[260px] sm:h-[340px] md:h-[390px] lg:h-[430px] rounded-[18px] sm:rounded-[26px] md:rounded-[30px] overflow-hidden shadow-2xl bg-[#09261f]">
             <Image
               src="/images/hero-photoshoot.jpg"
-              alt="Studio photoshoot session with professional photographer and model"
+              alt="Sesi pemotretan profesional fotografer dan klien di studio foto"
               fill
               priority
               className="object-cover object-[center_35%] hover:scale-[1.015] transition-transform duration-700 ease-out"
@@ -538,7 +539,7 @@ export default function Home() {
             <div className="relative w-full min-h-[340px] sm:min-h-[420px] lg:min-h-full rounded-[24px] sm:rounded-[32px] md:rounded-[36px] overflow-hidden shadow-xl bg-zinc-100">
               <Image
                 src="/images/mission-team.jpg"
-                alt="Studioin team strategy and creative session"
+                alt="Tim fotografer dan studio kreatif Studioin"
                 fill
                 priority
                 className="object-cover object-center hover:scale-[1.02] transition-transform duration-700 ease-out"
@@ -555,7 +556,7 @@ export default function Home() {
               {/* Badge */}
               <div className="mb-6 sm:mb-8">
                 <span className="inline-flex items-center px-4 py-1.5 rounded-full border border-zinc-200 text-zinc-600 text-xs font-semibold tracking-wider uppercase bg-zinc-50/50">
-                  Introduction
+                  Tentang Studioin
                 </span>
               </div>
 
@@ -577,30 +578,30 @@ export default function Home() {
               {/* Stat 1 */}
               <div className="stat-item border-l-[2.5px] sm:border-l-[3px] border-[#bef238] pl-3.5 sm:pl-4">
                 <span className="block text-2xl sm:text-3xl lg:text-[38px] font-extrabold text-zinc-950 tracking-tight leading-none">
-                  10+
+                  1 Detik
                 </span>
                 <span className="block text-zinc-500 text-xs sm:text-[13px] font-medium leading-snug mt-2">
-                  Years of Meaningful Impact
+                  Sinkronisasi Link Google Drive
                 </span>
               </div>
 
               {/* Stat 2 */}
               <div className="stat-item border-l-[2.5px] sm:border-l-[3px] border-[#bef238] pl-3.5 sm:pl-4">
                 <span className="block text-2xl sm:text-3xl lg:text-[38px] font-extrabold text-zinc-950 tracking-tight leading-none">
-                  90+
+                  0 Ribet
                 </span>
                 <span className="block text-zinc-500 text-xs sm:text-[13px] font-medium leading-snug mt-2">
-                  Successful Global Projects
+                  Klien Pilih Foto Langsung dari HP
                 </span>
               </div>
 
               {/* Stat 3 */}
               <div className="stat-item border-l-[2.5px] sm:border-l-[3px] border-[#bef238] pl-3.5 sm:pl-4">
                 <span className="block text-2xl sm:text-3xl lg:text-[38px] font-extrabold text-zinc-950 tracking-tight leading-none">
-                  40+
+                  100%
                 </span>
                 <span className="block text-zinc-500 text-xs sm:text-[13px] font-medium leading-snug mt-2">
-                  Trusted Global Partners
+                  Privasi Aman dengan PIN Enkripsi
                 </span>
               </div>
             </div>
@@ -610,6 +611,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ------------------------------------------------------------- */}
       {/* ------------------------------------------------------------- */}
       {/* SECTION: Studioin Creative Portal (Join / Login / Register)   */}
       {/* ------------------------------------------------------------- */}
@@ -623,11 +625,11 @@ export default function Home() {
           {/* Section Header */}
           <div className="relative z-10 max-w-3xl">
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-[1.15]">
-              Elevate Your Client Photo Proofing Experience
+              Tingkatkan Pengalaman Pemilihan Foto Klien Anda
             </h2>
 
             <p className="text-emerald-100/90 text-sm sm:text-base leading-relaxed mt-4 max-w-2xl">
-              Deliver exclusive proofing galleries for every client photoshoot session. Enjoy instant Google Drive integration, secure PIN protection, and an effortless selection workflow.
+              Hadirkan portal proofing eksklusif untuk setiap sesi pemotretan klien. Nikmati integrasi instan Google Drive, proteksi kode PIN, dan alur seleksi foto yang praktis tanpa ribet.
             </p>
           </div>
         </div>
@@ -643,29 +645,29 @@ export default function Home() {
                   <UserPlus className="w-6 h-6" />
                 </div>
                 <span className="text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                  New Studio
+                  Studio Baru
                 </span>
               </div>
 
               <h3 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight mb-2">
-                Create Photographer Account
+                Daftar Akun Fotografer
               </h3>
               <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed mb-6">
-                Ready to upgrade your workflow? Register your studio account now to create client galleries with zero setup friction.
+                Siap meningkatkan efisiensi alur kerja studio Anda? Daftarkan akun sekarang untuk mulai membuat galeri klien tanpa setup server yang rumit.
               </p>
 
               <div className="space-y-2.5 mb-8">
                 <div className="flex items-center gap-2.5 text-xs text-zinc-600">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Complete gallery management dashboard access</span>
+                  <span>Akses penuh dashboard manajemen galeri foto</span>
                 </div>
                 <div className="flex items-center gap-2.5 text-xs text-zinc-600">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Direct sync with Google Drive photoshoot folders</span>
+                  <span>Sinkronisasi otomatis dengan folder Google Drive photoshoot</span>
                 </div>
                 <div className="flex items-center gap-2.5 text-xs text-zinc-600">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Customizable PIN security & automated expiry control</span>
+                  <span>Proteksi keamanan kode PIN privat & kontrol masa aktif galeri</span>
                 </div>
               </div>
             </div>
@@ -674,7 +676,7 @@ export default function Home() {
               href="/admin/register"
               className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-2xl bg-[#114234] hover:bg-[#185342] text-white font-bold text-xs sm:text-sm transition-all shadow-md active:scale-98"
             >
-              <span>Register Account (Free)</span>
+              <span>Daftar Akun (Gratis)</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1 text-[#bef238]" />
             </Link>
           </div>
@@ -687,29 +689,29 @@ export default function Home() {
                   <LogIn className="w-6 h-6" />
                 </div>
                 <span className="text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200">
-                  Member Portal
+                  Portal Member
                 </span>
               </div>
 
               <h3 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight mb-2">
-                Already Registered? Sign In
+                Sudah Terdaftar? Masuk Dashboard
               </h3>
               <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed mb-6">
-                Already have an account? Sign in to manage active galleries, track client photo selections, and download final results.
+                Sudah memiliki akun? Masuk untuk mengelola galeri aktif, melihat foto yang telah dipilih klien, dan mengekspor daftar nomor file.
               </p>
 
               <div className="space-y-2.5 mb-8">
                 <div className="flex items-center gap-2.5 text-xs text-zinc-600">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Track incoming client selections in real-time</span>
+                  <span>Pantau seleksi foto klien secara real-time</span>
                 </div>
                 <div className="flex items-center gap-2.5 text-xs text-zinc-600">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Download original full-resolution chosen photos</span>
+                  <span>Salin nomor file & download foto pilihan resolusi penuh</span>
                 </div>
                 <div className="flex items-center gap-2.5 text-xs text-zinc-600">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Extend gallery proofing access with a single click</span>
+                  <span>Perpanjang masa aktif akses galeri klien dalam satu klik</span>
                 </div>
               </div>
             </div>
@@ -718,7 +720,7 @@ export default function Home() {
               href="/admin/login"
               className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-2xl bg-zinc-50 hover:bg-zinc-100 text-zinc-900 font-bold text-xs sm:text-sm border border-zinc-300 transition-all shadow-xs active:scale-98"
             >
-              <span>Sign In to Dashboard</span>
+              <span>Masuk ke Dashboard</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
@@ -727,20 +729,20 @@ export default function Home() {
       </section>
 
       {/* ------------------------------------------------------------- */}
-      {/* SECTION 3: Interactive Professional Creative Services         */}
+      {/* SECTION 3: Fitur Utama Alur Kerja Fotografi                  */}
       {/* ------------------------------------------------------------- */}
-      <section id="services" className="w-full max-w-[1440px] mx-auto px-5 sm:px-8 md:px-12 lg:px-16 py-16 sm:py-24 lg:py-28">
+      <section id="features" className="w-full max-w-[1440px] mx-auto px-5 sm:px-8 md:px-12 lg:px-16 py-16 sm:py-24 lg:py-28">
         
         {/* Section Header */}
         <div className="service-header text-center max-w-3xl mx-auto mb-12 sm:mb-16">
           <span className="inline-flex items-center px-4 py-1.5 rounded-full border border-zinc-200 text-zinc-600 text-xs font-semibold tracking-wider uppercase bg-zinc-50/50 mb-4">
-            Service
+            Fitur Unggulan
           </span>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-zinc-950 tracking-tight">
-            Professional Creative Services
+            Dirancang Khusus untuk Alur Kerja Fotografi Modern
           </h2>
           <p className="text-zinc-500 text-sm sm:text-base leading-relaxed mt-3.5 max-w-2xl mx-auto">
-            Discover tailored creative solutions designed to strengthen your brand strategy, reduce environmental impact, and support growth with actionable insights.
+            Semua kebutuhan proofing dan seleksi foto klien ada di satu tempat. Mulai dari sinkronisasi Google Drive instan, keamanan kode PIN, hingga kuota pilihan yang fleksibel.
           </p>
         </div>
 
@@ -847,7 +849,7 @@ export default function Home() {
             {/* Left: Contact Info */}
             <div className="md:col-span-3">
               <span className="block text-xs font-semibold uppercase tracking-widest text-[#bef238] mb-2">
-                Contact
+                Kontak Kami
               </span>
               <a
                 href="mailto:Hi@studioin.com"
@@ -866,14 +868,14 @@ export default function Home() {
             {/* Center: Main Heading & CTA Button */}
             <div className="md:col-span-6 text-center flex flex-col items-center">
               <h3 className="text-xl sm:text-2xl md:text-[28px] font-extrabold tracking-tight leading-snug max-w-md">
-                Got a project? Want to collaborate?
+                Punya pertanyaan atau ingin kerja sama studio?
               </h3>
 
               <Link
                 href="mailto:Hi@studioin.com"
                 className="group mt-4 inline-flex items-center gap-2 bg-[#bef238] hover:bg-[#b2e82e] text-[#114234] font-bold text-xs sm:text-sm px-6 py-2.5 rounded-full transition-all duration-200 shadow-md hover:shadow-lime-500/20 active:scale-95"
               >
-                <span>Discuss your project</span>
+                <span>Hubungi Tim Studioin</span>
                 <svg
                   className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1"
                   viewBox="0 0 24 24"
@@ -893,7 +895,7 @@ export default function Home() {
             <div className="md:col-span-3 text-left md:text-right space-y-4">
               <div>
                 <span className="block text-xs font-semibold uppercase tracking-widest text-[#bef238] mb-1">
-                  Indonesia
+                  Kantor Operasional
                 </span>
                 <p className="text-xs sm:text-sm text-zinc-200 leading-relaxed">
                   Jln. Bambu No. 375<br />
@@ -903,11 +905,11 @@ export default function Home() {
 
               <div>
                 <span className="block text-xs font-semibold uppercase tracking-widest text-[#bef238] mb-1">
-                  Hong Kong
+                  Layanan Cloud
                 </span>
                 <p className="text-xs sm:text-sm text-zinc-200 leading-relaxed">
-                  60 Ya Fung Sung<br />
-                  San Tsuen, 75129
+                  Integrasi Google Drive<br />
+                  Akses Cepat 24/7
                 </p>
               </div>
             </div>
@@ -920,12 +922,12 @@ export default function Home() {
           {/* Middle Meta Info: Copyright, Terms, Social Icons */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-300 pb-2 sm:pb-3">
             <div>
-              <p>© Copyright 2026. Studioin. All rights reserved.</p>
+              <p>© Hak Cipta 2026 Studioin. Seluruh hak cipta dilindungi.</p>
             </div>
 
             <div>
               <Link href="#terms" className="hover:text-white transition-colors">
-                Terms & Conditions
+                Syarat & Ketentuan Layanan
               </Link>
             </div>
 
@@ -962,11 +964,11 @@ export default function Home() {
         </div>
 
         {/* ------------------------------------------------------------- */}
-        {/* Compact Moderately-Submerged Typography "LET'S WORK"          */}
+        {/* Compact Moderately-Submerged Typography "STUDIOIN"            */}
         {/* ------------------------------------------------------------- */}
         <div className="w-full overflow-hidden flex justify-center select-none pointer-events-none pt-2 sm:pt-4">
           <h2 className="footer-big-text text-[9.5vw] sm:text-[10vw] md:text-[10.5vw] font-black tracking-[0.14em] sm:tracking-[0.18em] text-black uppercase leading-none translate-y-[20%] text-center whitespace-nowrap drop-shadow-sm">
-            LET&apos;S WORK
+            STUDIOIN
           </h2>
         </div>
 
@@ -994,16 +996,16 @@ export default function Home() {
             {/* Badge */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#bef238]/20 border border-[#bef238]/40 text-[#bef238] text-[11px] font-bold uppercase tracking-wider mb-3">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Exclusive for Photographers</span>
+              <span>Khusus Fotografer & Studio Foto</span>
             </div>
 
             {/* Headline */}
             <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white leading-snug">
-              Create Exclusive Photo Proofing Galleries for Your Clients
+              Buat Galeri Pemilihan Foto Eksklusif untuk Klien Anda
             </h3>
 
             <p className="text-emerald-100/90 text-xs sm:text-sm mt-2 leading-relaxed">
-              Elevate your client photoshoot experience with a modern proofing portal. Clients review and select their favorite photos quickly, easily, and securely.
+              Tingkatkan alur kerja photoshoot Anda dengan portal proofing modern. Klien dapat melihat dan memilih foto favorit dengan cepat, mudah, dan aman dari perangkat apa pun.
             </p>
 
             {/* Feature Bullets */}
@@ -1013,9 +1015,9 @@ export default function Home() {
                   <Zap className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-white block">Instant Google Drive Sync</span>
+                  <span className="text-xs font-bold text-white block">Integrasi Google Drive Instan</span>
                   <span className="text-[11px] text-emerald-200/80 block leading-tight">
-                    Simply paste your Google Drive folder link — all photos load instantly into your gallery.
+                    Cukup tempel tautan folder Google Drive — seluruh foto pemotretan langsung terindeks otomatis.
                   </span>
                 </div>
               </div>
@@ -1025,9 +1027,9 @@ export default function Home() {
                   <Lock className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-white block">PIN Protection & Auto-Expiry</span>
+                  <span className="text-xs font-bold text-white block">Proteksi PIN & Batas Masa Aktif</span>
                   <span className="text-[11px] text-emerald-200/80 block leading-tight">
-                    Protect client privacy with customized PIN access and automated gallery expiration.
+                    Jamin privasi sesi foto klien dengan sandi PIN dan batasi batas waktu seleksi otomatis.
                   </span>
                 </div>
               </div>
@@ -1037,9 +1039,9 @@ export default function Home() {
                   <CheckCircle2 className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-white block">Real-Time Client Selections</span>
+                  <span className="text-xs font-bold text-white block">Seleksi Foto Klien Real-Time</span>
                   <span className="text-[11px] text-emerald-200/80 block leading-tight">
-                    Clients select favorites directly on mobile or desktop without any app installation.
+                    Klien menandai foto favorit langsung dari ponsel tanpa instal aplikasi, tersimpan langsung di dashboard Anda.
                   </span>
                 </div>
               </div>
@@ -1052,7 +1054,7 @@ export default function Home() {
                 onClick={handleCloseModal}
                 className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-2xl bg-[#bef238] hover:bg-[#b2e82e] text-[#114234] font-extrabold text-xs sm:text-sm shadow-lg shadow-lime-950/30 transition-all active:scale-[0.98]"
               >
-                <span>Register Now & Create Gallery</span>
+                <span>Daftar Sekarang & Buat Galeri</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
 
@@ -1062,7 +1064,7 @@ export default function Home() {
                   onClick={handleCloseModal}
                   className="text-emerald-200 hover:text-white font-medium underline underline-offset-4 transition-colors"
                 >
-                  Already have an account? Sign In
+                  Sudah punya akun? Masuk
                 </Link>
 
                 <button
@@ -1070,7 +1072,7 @@ export default function Home() {
                   onClick={handleCloseModal}
                   className="text-emerald-300/70 hover:text-white font-medium cursor-pointer transition-colors"
                 >
-                  Maybe Later
+                  Nanti Saja
                 </button>
               </div>
             </div>
