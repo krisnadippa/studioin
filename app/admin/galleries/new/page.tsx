@@ -318,7 +318,7 @@ export default function NewGalleryPage() {
               <div className="mt-2 p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 flex items-start gap-2.5 text-[11px] text-[#114234]">
                 <ShieldCheck className="w-4 h-4 text-[#114234] shrink-0 mt-0.5" />
                 <p>
-                  <strong>Original storage safety:</strong> Studioin reads metadata and creates temporary WebP previews without downloading 20 GB of original files to the server.
+                  <strong>Mendukung format foto & RAW:</strong> Mendukung JPG, PNG, WEBP, serta file kamera RAW (CR2, CR3, ARW, NEF, DNG, RAF, dll) termasuk di dalam subfolder. Studioin membaca metadata preview instan tanpa menyedot kuota penyimpanan server Anda.
                 </p>
               </div>
             </div>

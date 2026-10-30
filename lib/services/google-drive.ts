@@ -86,54 +86,149 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
       throw new Error("Layanan Google Drive belum dikonfigurasi di server (GOOGLE_DRIVE_API_KEY). Silakan hubungi admin sistem.");
     }
 
-    let allFiles: any[] = [];
-    let pageToken: string | undefined = undefined;
+    const PHOTO_AND_RAW_EXTENSIONS = new Set([
+      // Standard raster & web images
+      "jpg", "jpeg", "png", "webp", "gif", "bmp", "tiff", "tif", "heic", "heif", "avif",
+      // Camera RAW formats
+      "cr2", "cr3", "crw",       // Canon
+      "arw", "srf", "sr2",       // Sony
+      "nef", "nrw",             // Nikon
+      "dng",                    // Adobe / Leica / DJI / Pentax
+      "raf",                    // Fujifilm
+      "rw2", "raw",             // Panasonic Lumix
+      "orf",                    // Olympus / OM System
+      "pef", "ptx",             // Pentax
+      "srw",                    // Samsung
+      "3fr",                    // Hasselblad
+      "iiq",                    // Phase One
+      "gpr",                    // GoPro
+      "rwl",                    // Leica
+      "kdc", "dcr",             // Kodak
+      "mef", "mos",             // Mamiya / Leaf
+    ]);
 
-    do {
-      // Query image files in folder, ordered by name ascending
-      const query = encodeURIComponent(`'${folderId}' in parents and trashed = false and mimeType contains 'image/'`);
-      const fields = encodeURIComponent("nextPageToken,files(id,name,mimeType,thumbnailLink,imageMediaMetadata,size)");
-      let url = `https://www.googleapis.com/drive/v3/files?q=${query}&orderBy=name&fields=${fields}&pageSize=100&key=${apiKey}`;
-      if (pageToken) {
-        url += `&pageToken=${pageToken}`;
+    const isPhotoOrRawFile = (file: { name?: string; mimeType?: string; imageMediaMetadata?: unknown }): boolean => {
+      if (file.mimeType === "application/vnd.google-apps.folder") return false;
+      if (file.mimeType && file.mimeType.startsWith("image/")) return true;
+      if (file.imageMediaMetadata && typeof file.imageMediaMetadata === "object") return true;
+
+      if (file.name) {
+        const ext = file.name.split(".").pop()?.toLowerCase();
+        if (ext && PHOTO_AND_RAW_EXTENSIONS.has(ext)) {
+          return true;
+        }
       }
+      return false;
+    };
 
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        console.error(`[GoogleDrive API listFiles Error] Status: ${res.status}`, errData);
-        if (res.status === 404 || res.status === 403) {
+    const getPhotoMimeType = (fileName: string, originalMime?: string): string => {
+      if (originalMime && originalMime !== "application/octet-stream" && originalMime.startsWith("image/")) {
+        return originalMime;
+      }
+      const ext = fileName.split(".").pop()?.toLowerCase();
+      switch (ext) {
+        case "jpg":
+        case "jpeg":
+          return "image/jpeg";
+        case "png":
+          return "image/png";
+        case "webp":
+          return "image/webp";
+        case "cr2":
+          return "image/x-canon-cr2";
+        case "cr3":
+          return "image/x-canon-cr3";
+        case "arw":
+          return "image/x-sony-arw";
+        case "nef":
+          return "image/x-nikon-nef";
+        case "dng":
+          return "image/x-adobe-dng";
+        case "raf":
+          return "image/x-fuji-raf";
+        case "rw2":
+          return "image/x-panasonic-rw2";
+        case "orf":
+          return "image/x-olympus-orf";
+        default:
+          return originalMime || "image/jpeg";
+      }
+    };
+
+    const foldersToScan: string[] = [folderId];
+    const scannedFolders = new Set<string>();
+    const allFiles: any[] = [];
+
+    while (foldersToScan.length > 0 && allFiles.length < limit) {
+      const currentFolderId = foldersToScan.shift()!;
+      if (scannedFolders.has(currentFolderId)) continue;
+      scannedFolders.add(currentFolderId);
+
+      let pageToken: string | undefined = undefined;
+
+      do {
+        // Query items inside current folder (excluding trashed)
+        const query = encodeURIComponent(`'${currentFolderId}' in parents and trashed = false`);
+        const fields = encodeURIComponent("nextPageToken,files(id,name,mimeType,thumbnailLink,imageMediaMetadata,size)");
+        let url = `https://www.googleapis.com/drive/v3/files?q=${query}&orderBy=name&fields=${fields}&pageSize=100&key=${apiKey}`;
+        if (pageToken) {
+          url += `&pageToken=${pageToken}`;
+        }
+
+        const res = await fetch(url);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          console.error(`[GoogleDrive API listFiles Error] Status: ${res.status}`, errData);
+          if (res.status === 404 || res.status === 403) {
+            // Only throw error if the root shared folder itself is inaccessible
+            if (currentFolderId === folderId) {
+              throw new Error(
+                "Folder Google Drive tidak dapat diakses atau masih berstatus Privat. Mohon buka Google Drive, klik Bagikan (Share), lalu ubah akses menjadi 'Siapa saja yang memiliki link' (Anyone with the link can view)."
+              );
+            }
+            // Subfolder inaccessible, continue scanning others
+            break;
+          }
           throw new Error(
-            "Folder Google Drive tidak dapat diakses atau masih berstatus Privat. Mohon buka Google Drive, klik Bagikan (Share), lalu ubah akses menjadi 'Siapa saja yang memiliki link' (Anyone with the link can view)."
+            `Gagal mengakses Google Drive (${errData?.error?.message || `HTTP ${res.status} ${res.statusText}`}). Pastikan link folder Google Drive benar dan dapat diakses publik.`
           );
         }
-        throw new Error(
-          `Gagal mengakses Google Drive (${errData?.error?.message || `HTTP ${res.status} ${res.statusText}`}). Pastikan link folder Google Drive benar dan dapat diakses publik.`
-        );
-      }
 
-      const data = await res.json();
-      if (data.files && Array.isArray(data.files)) {
-        allFiles = [...allFiles, ...data.files];
-      }
-      pageToken = data.nextPageToken;
+        const data = await res.json();
+        if (data.files && Array.isArray(data.files)) {
+          for (const item of data.files) {
+            if (item.mimeType === "application/vnd.google-apps.folder") {
+              // Queue subfolder to scan (cap at 25 folders to avoid infinite loops)
+              if (scannedFolders.size + foldersToScan.length < 25) {
+                foldersToScan.push(item.id);
+              }
+            } else if (isPhotoOrRawFile(item)) {
+              allFiles.push(item);
+              if (allFiles.length >= limit) {
+                break;
+              }
+            }
+          }
+        }
 
-      if (allFiles.length >= limit) {
-        allFiles = allFiles.slice(0, limit);
-        break;
-      }
-    } while (pageToken);
+        pageToken = data.nextPageToken;
+        if (allFiles.length >= limit) break;
+      } while (pageToken);
+    }
 
     return allFiles.map((file: any) => ({
       id: file.id,
       name: file.name,
-      mimeType: file.mimeType || "image/jpeg",
-      sizeBytes: Number(file.size) || 12000000,
+      mimeType: getPhotoMimeType(file.name, file.mimeType),
+      sizeBytes: Number(file.size) || 25000000,
       width: file.imageMediaMetadata?.width || 6000,
       height: file.imageMediaMetadata?.height || 4000,
-      thumbnailLink: `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`,
+      thumbnailLink: file.thumbnailLink 
+        ? file.thumbnailLink.replace(/=s\d+$/, "=w800") 
+        : `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`,
     }));
   }
 }
 
 export const googleDriveService: IGoogleDriveService = new HybridGoogleDriveService();
+

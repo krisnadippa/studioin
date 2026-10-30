@@ -103,7 +103,7 @@ export class GalleryService {
       const driveFiles = await googleDriveService.listFiles(driveFolderId, 1000);
       if (driveFiles.length === 0) {
         throw new Error(
-          "Folder Google Drive berhasil diakses, namun tidak ditemukan file foto/gambar di dalamnya. Pastikan folder berisi foto berformat JPG, PNG, atau WEBP."
+          "Folder Google Drive berhasil diakses, namun tidak ditemukan file foto di dalamnya. Pastikan folder berisi foto berformat JPG, PNG, WEBP, atau file RAW kamera (CR2, CR3, ARW, NEF, DNG, RAF, dll)."
         );
       }
       const total = driveFiles.length;
@@ -114,8 +114,10 @@ export class GalleryService {
         const photoId = `photo-${galleryId}-${i + 1}`;
 
         // Direct high-quality Google Drive CDN thumbnail (~800px) and preview (~2048px)
-        const thumbUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
-        const previewUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w2048`;
+        const thumbUrl = file.thumbnailLink || `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
+        const previewUrl = file.thumbnailLink 
+          ? file.thumbnailLink.replace(/=s\d+$/, "=w2048").replace(/=w\d+$/, "=w2048")
+          : `https://drive.google.com/thumbnail?id=${file.id}&sz=w2048`;
 
         photos.push({
           id: photoId,
