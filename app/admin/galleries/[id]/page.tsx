@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { GalleryImage } from "@/components/gallery/GalleryImage";
@@ -29,6 +29,9 @@ import {
   Edit3,
   Loader2,
   Key,
+  Folder,
+  Film,
+  Play,
 } from "lucide-react";
 import { AdminTopNav } from "@/components/admin/AdminTopNav";
 import { GalleryStatusBadge } from "@/components/admin/GalleryStatusBadge";
@@ -199,8 +202,29 @@ export default function GalleryDetailPage({
     }
   };
 
-  // Lightbox State
+  // Lightbox & Subfolder Filtering State
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<string>("all");
+
+  const subfolders = useMemo(() => {
+    const folders = new Set<string>();
+    photos.forEach((p) => {
+      if (p.folder_name && p.folder_name.trim() !== "") {
+        folders.add(p.folder_name.trim());
+      }
+    });
+    return Array.from(folders).sort();
+  }, [photos]);
+
+  const videoPhotos = useMemo(() => {
+    return photos.filter((p) => p.media_type === "video");
+  }, [photos]);
+
+  const filteredPhotos = useMemo(() => {
+    if (selectedFolder === "all") return photos;
+    if (selectedFolder === "__video__") return videoPhotos;
+    return photos.filter((p) => (p.folder_name || "").trim() === selectedFolder);
+  }, [photos, selectedFolder, videoPhotos]);
 
   // Keyboard navigation for Lightbox
   useEffect(() => {
@@ -208,15 +232,15 @@ export default function GalleryDetailPage({
       if (lightboxIndex === null) return;
       if (e.key === "Escape") setLightboxIndex(null);
       if (e.key === "ArrowLeft") {
-        setLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : photos.length - 1));
+        setLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : filteredPhotos.length - 1));
       }
       if (e.key === "ArrowRight") {
-        setLightboxIndex((prev) => (prev !== null && prev < photos.length - 1 ? prev + 1 : 0));
+        setLightboxIndex((prev) => (prev !== null && prev < filteredPhotos.length - 1 ? prev + 1 : 0));
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [lightboxIndex, photos.length]);
+  }, [lightboxIndex, filteredPhotos.length]);
 
   useEffect(() => {
     fetchGalleryData();
@@ -512,8 +536,20 @@ export default function GalleryDetailPage({
         <section className="bg-white rounded-3xl border border-zinc-200/80 p-6 sm:p-8 shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
             <div>
-              <h3 className="text-base font-bold text-zinc-950">Photos Preview ({photos.length})</h3>
-              <p className="text-xs text-zinc-500 font-medium">Real-time photos synchronized from Google Drive</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-zinc-950">Photos Preview ({photos.length})</h3>
+                {subfolders.length > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-[#114234]">
+                    📁 {subfolders.length} Subfolder
+                  </span>
+                )}
+                {videoPhotos.length > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-700">
+                    🎬 {videoPhotos.length} Video
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-zinc-500 font-medium mt-0.5">Real-time photos synchronized from Google Drive</p>
             </div>
             
             <div className="flex items-center gap-2">
@@ -536,13 +572,62 @@ export default function GalleryDetailPage({
             </div>
           </div>
 
-          {photos.length === 0 ? (
+          {/* Subfolder & Category Filter Tabs */}
+          {(subfolders.length > 0 || videoPhotos.length > 0) && (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              <button
+                onClick={() => { setSelectedFolder("all"); setLightboxIndex(null); }}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  selectedFolder === "all"
+                    ? "bg-[#114234] text-[#bef238] shadow-xs"
+                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900"
+                }`}
+              >
+                <span>Semua File ({photos.length})</span>
+              </button>
+
+              {subfolders.map((folder) => {
+                const count = photos.filter((p) => p.folder_name === folder).length;
+                const isSelected = selectedFolder === folder;
+                return (
+                  <button
+                    key={folder}
+                    onClick={() => { setSelectedFolder(folder); setLightboxIndex(null); }}
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      isSelected
+                        ? "bg-[#114234] text-[#bef238] shadow-xs"
+                        : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900"
+                    }`}
+                  >
+                    <Folder className="w-3.5 h-3.5" />
+                    <span>{folder} ({count})</span>
+                  </button>
+                );
+              })}
+
+              {videoPhotos.length > 0 && (
+                <button
+                  onClick={() => { setSelectedFolder("__video__"); setLightboxIndex(null); }}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    selectedFolder === "__video__"
+                      ? "bg-purple-900 text-purple-200 shadow-xs"
+                      : "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                  }`}
+                >
+                  <Film className="w-3.5 h-3.5" />
+                  <span>Video ({videoPhotos.length})</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {filteredPhotos.length === 0 ? (
             <div className="p-12 text-center text-zinc-400 text-xs">
-              No photos available in this gallery yet.
+              Tidak ada file pada filter ini.
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {photos.map((photo, index) => (
+              {filteredPhotos.map((photo, index) => (
                 <div
                   key={photo.id}
                   onClick={() => setLightboxIndex(index)}
@@ -551,16 +636,40 @@ export default function GalleryDetailPage({
                   <GalleryImage
                     src={photo.thumbnail_url}
                     alt={photo.filename}
+                    driveFileId={photo.drive_file_id}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                     index={index}
                   />
+
+                  {/* Badges: Folder & Video */}
+                  <div className="absolute top-2 left-2 flex flex-col gap-1 z-10 pointer-events-none">
+                    {photo.folder_name && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-black/60 text-white backdrop-blur-xs shadow-xs">
+                        <Folder className="w-2.5 h-2.5 text-[#bef238]" />
+                        <span className="truncate max-w-[90px]">{photo.folder_name}</span>
+                      </span>
+                    )}
+                    {photo.media_type === "video" && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-purple-600/90 text-white backdrop-blur-xs shadow-xs">
+                        <Play className="w-2.5 h-2.5 fill-white" />
+                        <span>VIDEO</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Center hover indicator / play icon */}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <div className="p-2 bg-white/20 backdrop-blur-xs rounded-full text-white">
-                      <ZoomIn className="w-5 h-5" />
+                      {photo.media_type === "video" ? (
+                        <Play className="w-5 h-5 fill-white" />
+                      ) : (
+                        <ZoomIn className="w-5 h-5" />
+                      )}
                     </div>
                   </div>
+
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white text-[10px] font-mono truncate">
                     {photo.filename}
                   </div>
@@ -573,30 +682,42 @@ export default function GalleryDetailPage({
       </main>
 
       {/* Admin Fullscreen Lightbox Modal */}
-      {lightboxIndex !== null && photos[lightboxIndex] && (
+      {lightboxIndex !== null && filteredPhotos[lightboxIndex] && (
         <div className="fixed inset-0 z-50 bg-black/95 flex flex-col justify-between select-none animate-fadeIn">
           {/* Lightbox Header Bar */}
           <div className="flex items-center justify-between p-4 sm:p-6 bg-gradient-to-b from-black/80 to-transparent z-10">
             <div className="flex items-center gap-2 sm:gap-3 font-mono text-xs text-zinc-300 min-w-0">
-              <span className="truncate max-w-[160px] sm:max-w-[300px] font-bold text-white" title={photos[lightboxIndex].filename}>
-                {photos[lightboxIndex].filename}
+              <span className="truncate max-w-[160px] sm:max-w-[300px] font-bold text-white" title={filteredPhotos[lightboxIndex].filename}>
+                {filteredPhotos[lightboxIndex].filename}
               </span>
+              {filteredPhotos[lightboxIndex].folder_name && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-sans font-semibold bg-emerald-500/20 text-[#bef238] border border-emerald-500/30">
+                  <Folder className="w-3 h-3" />
+                  <span>{filteredPhotos[lightboxIndex].folder_name}</span>
+                </span>
+              )}
+              {filteredPhotos[lightboxIndex].media_type === "video" && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-sans font-bold bg-purple-500/30 text-purple-200 border border-purple-500/40">
+                  <Film className="w-3 h-3" />
+                  <span>VIDEO</span>
+                </span>
+              )}
               <span className="text-zinc-600 shrink-0">•</span>
               <span className="shrink-0 text-zinc-400">
-                {lightboxIndex + 1} of {photos.length}
+                {lightboxIndex + 1} of {filteredPhotos.length}
               </span>
             </div>
 
             {/* Right Controls */}
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <a
-                href={`/api/admin/galleries/${id}/download/${photos[lightboxIndex].id}`}
+                href={`/api/admin/galleries/${id}/download/${filteredPhotos[lightboxIndex].id}`}
                 download
                 className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
-                title="Download HD photo"
+                title="Download original file"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Download HD</span>
+                <span className="hidden sm:inline">Download</span>
               </a>
 
               <button
@@ -610,34 +731,47 @@ export default function GalleryDetailPage({
             </div>
           </div>
 
-          {/* Lightbox Center Image View */}
+          {/* Lightbox Center View */}
           <div className="relative flex-1 flex items-center justify-center p-4 sm:p-8">
             {/* Previous Button */}
             <button
-              onClick={() => setLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : photos.length - 1))}
+              onClick={() => setLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : filteredPhotos.length - 1))}
               className="absolute left-4 p-3 rounded-full bg-black/50 hover:bg-black/80 text-white border border-white/10 transition-colors z-20 cursor-pointer"
-              aria-label="Previous photo"
+              aria-label="Previous file"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
 
-            {/* Main Preview Image */}
+            {/* Main Preview (Video or Image) */}
             <div className="relative w-full h-full max-h-[82vh] flex items-center justify-center">
-              <GalleryImage
-                src={photos[lightboxIndex].preview_url}
-                alt={photos[lightboxIndex].filename}
-                fill
-                priority
-                className="object-contain"
-                index={lightboxIndex}
-              />
+              {filteredPhotos[lightboxIndex].media_type === "video" ? (
+                <div className="w-full max-w-4xl aspect-video rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl flex items-center justify-center">
+                  <iframe
+                    src={filteredPhotos[lightboxIndex].video_stream_url || `https://drive.google.com/file/d/${filteredPhotos[lightboxIndex].drive_file_id}/preview`}
+                    className="w-full h-full border-0"
+                    allow="autoplay; encrypted-media"
+                    allowFullScreen
+                    title={filteredPhotos[lightboxIndex].filename}
+                  />
+                </div>
+              ) : (
+                <GalleryImage
+                  src={filteredPhotos[lightboxIndex].preview_url}
+                  alt={filteredPhotos[lightboxIndex].filename}
+                  driveFileId={filteredPhotos[lightboxIndex].drive_file_id}
+                  fill
+                  priority
+                  className="object-contain"
+                  index={lightboxIndex}
+                />
+              )}
             </div>
 
             {/* Next Button */}
             <button
-              onClick={() => setLightboxIndex((prev) => (prev !== null && prev < photos.length - 1 ? prev + 1 : 0))}
+              onClick={() => setLightboxIndex((prev) => (prev !== null && prev < filteredPhotos.length - 1 ? prev + 1 : 0))}
               className="absolute right-4 p-3 rounded-full bg-black/50 hover:bg-black/80 text-white border border-white/10 transition-colors z-20 cursor-pointer"
-              aria-label="Next photo"
+              aria-label="Next file"
             >
               <ChevronRight className="w-6 h-6" />
             </button>

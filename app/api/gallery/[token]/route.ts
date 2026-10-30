@@ -92,12 +92,16 @@ export async function GET(
       : null,
     photos: photos.map((p) => ({
       id: p.id,
+      drive_file_id: p.drive_file_id,
       filename: p.filename,
       thumbnail_url: p.thumbnail_url,
       preview_url: p.preview_url,
       width: p.width,
       height: p.height,
       sort_order: p.sort_order,
+      folder_name: p.folder_name || null,
+      media_type: p.media_type || "image",
+      video_stream_url: p.video_stream_url || null,
     })),
   });
 }

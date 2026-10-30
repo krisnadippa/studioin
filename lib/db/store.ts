@@ -84,11 +84,14 @@ class NeonDatabase {
           return;
         }
 
-        // 0. Ensure admin_users table has new columns (safe migration)
+        // 0. Ensure admin_users & photos tables have new columns (safe migration)
         try {
           await sql`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'admin'`;
           await sql`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS gallery_limit INTEGER DEFAULT NULL`;
           await sql`ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS is_restricted BOOLEAN DEFAULT FALSE`;
+          await sql`ALTER TABLE photos ADD COLUMN IF NOT EXISTS folder_name VARCHAR(255) DEFAULT NULL`;
+          await sql`ALTER TABLE photos ADD COLUMN IF NOT EXISTS media_type VARCHAR(20) DEFAULT 'image'`;
+          await sql`ALTER TABLE photos ADD COLUMN IF NOT EXISTS video_stream_url TEXT DEFAULT NULL`;
         } catch (e) {
           console.warn("[NeonDatabase] Column migration warning (safe to ignore):", e);
         }
@@ -628,29 +631,20 @@ class NeonDatabase {
       ORDER BY sort_order ASC
     `;
     return (rows as Photo[]).map((p) => {
-      let thumb = p.thumbnail_url || "";
-      let prev = p.preview_url || "";
-
-      if (thumb.includes("googleusercontent.com/drive-storage")) {
-        thumb = thumb.replace(/=([ws])?\d+/, "=s800");
-        if (prev.includes("googleusercontent.com/drive-storage")) {
-          prev = prev.replace(/=([ws])?\d+/, "=s2048");
-        }
-      } else if (thumb.includes("lh3.googleusercontent.com/d/")) {
-        const driveId = p.drive_file_id || p.id.split("-").pop();
-        thumb = `https://drive.google.com/thumbnail?id=${driveId}&sz=w800`;
-        prev = `https://drive.google.com/thumbnail?id=${driveId}&sz=w2048`;
-      }
-
-      if (p.drive_file_id && (!thumb || thumb.includes("/api/placeholder/"))) {
-        thumb = `https://drive.google.com/thumbnail?id=${p.drive_file_id}&sz=w800`;
-        prev = `https://drive.google.com/thumbnail?id=${p.drive_file_id}&sz=w2048`;
-      }
+      const thumb = p.drive_file_id
+        ? `https://drive.google.com/thumbnail?id=${p.drive_file_id}&sz=w800`
+        : (p.thumbnail_url || `/api/photo/${p.id}`);
+      const prev = p.drive_file_id
+        ? `https://drive.google.com/thumbnail?id=${p.drive_file_id}&sz=w2048`
+        : (p.preview_url || thumb || `/api/photo/${p.id}`);
 
       return {
         ...p,
-        thumbnail_url: thumb || (p.drive_file_id ? `https://drive.google.com/thumbnail?id=${p.drive_file_id}&sz=w800` : `/api/photo/${p.id}`),
-        preview_url: prev || thumb || (p.drive_file_id ? `https://drive.google.com/thumbnail?id=${p.drive_file_id}&sz=w2048` : `/api/photo/${p.id}`),
+        folder_name: p.folder_name || null,
+        media_type: (p.media_type as "image" | "video") || "image",
+        video_stream_url: p.video_stream_url || (p.media_type === "video" && p.drive_file_id ? `https://drive.google.com/file/d/${p.drive_file_id}/preview` : null),
+        thumbnail_url: thumb,
+        preview_url: prev,
       };
     });
   }
@@ -679,7 +673,7 @@ class NeonDatabase {
       
       let paramIdx = 1;
       for (const photo of chunk) {
-        valPlaceholders.push(`($${paramIdx}, $${paramIdx+1}, $${paramIdx+2}, $${paramIdx+3}, $${paramIdx+4}, $${paramIdx+5}, $${paramIdx+6}, $${paramIdx+7}, $${paramIdx+8}, $${paramIdx+9}, $${paramIdx+10})`);
+        valPlaceholders.push(`($${paramIdx}, $${paramIdx+1}, $${paramIdx+2}, $${paramIdx+3}, $${paramIdx+4}, $${paramIdx+5}, $${paramIdx+6}, $${paramIdx+7}, $${paramIdx+8}, $${paramIdx+9}, $${paramIdx+10}, $${paramIdx+11}, $${paramIdx+12}, $${paramIdx+13})`);
         queryParams.push(
           photo.id,
           photo.gallery_id,
@@ -691,15 +685,19 @@ class NeonDatabase {
           photo.width || null,
           photo.height || null,
           photo.sort_order,
-          photo.created_at
+          photo.created_at,
+          photo.folder_name || null,
+          photo.media_type || "image",
+          photo.video_stream_url || null
         );
-        paramIdx += 11;
+        paramIdx += 14;
       }
       
       const queryStr = `
         INSERT INTO photos (
           id, gallery_id, drive_file_id, filename, mime_type, 
-          thumbnail_url, preview_url, width, height, sort_order, created_at
+          thumbnail_url, preview_url, width, height, sort_order, created_at,
+          folder_name, media_type, video_stream_url
         ) VALUES ${valPlaceholders.join(', ')}
         ON CONFLICT (id) DO NOTHING
       `;

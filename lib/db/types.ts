@@ -33,6 +33,9 @@ export interface Photo {
   width?: number;
   height?: number;
   sort_order: number;
+  folder_name?: string | null;
+  media_type?: "image" | "video";
+  video_stream_url?: string | null;
   created_at: string;
 }
 

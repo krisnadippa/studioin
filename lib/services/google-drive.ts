@@ -6,6 +6,9 @@ export interface DriveFileMetadata {
   width?: number;
   height?: number;
   thumbnailLink?: string;
+  folderName?: string | null;
+  mediaType?: "image" | "video";
+  videoStreamUrl?: string | null;
 }
 
 export interface DriveFolderInfo {
@@ -107,6 +110,19 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
       "mef", "mos",             // Mamiya / Leaf
     ]);
 
+    const VIDEO_EXTENSIONS = new Set([
+      "mp4", "mov", "m4v", "avi", "mkv", "webm", "wmv", "3gp", "flv", "mts", "m2ts"
+    ]);
+
+    const isVideoFile = (file: { name?: string; mimeType?: string }): boolean => {
+      if (file.mimeType && file.mimeType.startsWith("video/")) return true;
+      if (file.name) {
+        const ext = file.name.split(".").pop()?.toLowerCase();
+        if (ext && VIDEO_EXTENSIONS.has(ext)) return true;
+      }
+      return false;
+    };
+
     const isPhotoOrRawFile = (file: { name?: string; mimeType?: string; imageMediaMetadata?: unknown }): boolean => {
       if (file.mimeType === "application/vnd.google-apps.folder") return false;
       if (file.mimeType && file.mimeType.startsWith("image/")) return true;
@@ -155,20 +171,25 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
       }
     };
 
-    const foldersToScan: string[] = [folderId];
+    interface FolderQueueItem {
+      id: string;
+      name?: string;
+    }
+
+    const foldersToScan: FolderQueueItem[] = [{ id: folderId, name: undefined }];
     const scannedFolders = new Set<string>();
     const allFiles: any[] = [];
 
     while (foldersToScan.length > 0 && allFiles.length < limit) {
-      const currentFolderId = foldersToScan.shift()!;
-      if (scannedFolders.has(currentFolderId)) continue;
-      scannedFolders.add(currentFolderId);
+      const currentFolder = foldersToScan.shift()!;
+      if (scannedFolders.has(currentFolder.id)) continue;
+      scannedFolders.add(currentFolder.id);
 
       let pageToken: string | undefined = undefined;
 
       do {
         // Query items inside current folder (excluding trashed)
-        const query = encodeURIComponent(`'${currentFolderId}' in parents and trashed = false`);
+        const query = encodeURIComponent(`'${currentFolder.id}' in parents and trashed = false`);
         const fields = encodeURIComponent("nextPageToken,files(id,name,mimeType,thumbnailLink,imageMediaMetadata,size)");
         let url = `https://www.googleapis.com/drive/v3/files?q=${query}&orderBy=name&fields=${fields}&pageSize=100&key=${apiKey}`;
         if (pageToken) {
@@ -181,7 +202,7 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
           console.error(`[GoogleDrive API listFiles Error] Status: ${res.status}`, errData);
           if (res.status === 404 || res.status === 403) {
             // Only throw error if the root shared folder itself is inaccessible
-            if (currentFolderId === folderId) {
+            if (currentFolder.id === folderId) {
               throw new Error(
                 "Folder Google Drive tidak dapat diakses atau masih berstatus Privat. Mohon buka Google Drive, klik Bagikan (Share), lalu ubah akses menjadi 'Siapa saja yang memiliki link' (Anyone with the link can view)."
               );
@@ -200,10 +221,24 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
             if (item.mimeType === "application/vnd.google-apps.folder") {
               // Queue subfolder to scan (cap at 25 folders to avoid infinite loops)
               if (scannedFolders.size + foldersToScan.length < 25) {
-                foldersToScan.push(item.id);
+                const subfolderDisplayName = currentFolder.name ? `${currentFolder.name} / ${item.name}` : item.name;
+                foldersToScan.push({ id: item.id, name: subfolderDisplayName });
+              }
+            } else if (isVideoFile(item)) {
+              allFiles.push({
+                ...item,
+                folderName: currentFolder.name || null,
+                mediaType: "video",
+              });
+              if (allFiles.length >= limit) {
+                break;
               }
             } else if (isPhotoOrRawFile(item)) {
-              allFiles.push(item);
+              allFiles.push({
+                ...item,
+                folderName: currentFolder.name || null,
+                mediaType: "image",
+              });
               if (allFiles.length >= limit) {
                 break;
               }
@@ -219,13 +254,16 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
     return allFiles.map((file: any) => ({
       id: file.id,
       name: file.name,
-      mimeType: getPhotoMimeType(file.name, file.mimeType),
-      sizeBytes: Number(file.size) || 25000000,
-      width: file.imageMediaMetadata?.width || 6000,
-      height: file.imageMediaMetadata?.height || 4000,
-      thumbnailLink: file.thumbnailLink 
-        ? file.thumbnailLink.replace(/=s\d+$/, "=w800") 
-        : `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`,
+      mimeType: file.mediaType === "video" 
+        ? (file.mimeType || "video/mp4") 
+        : getPhotoMimeType(file.name, file.mimeType),
+      sizeBytes: Number(file.size) || (file.mediaType === "video" ? 50000000 : 25000000),
+      width: file.imageMediaMetadata?.width || (file.mediaType === "video" ? 1920 : 6000),
+      height: file.imageMediaMetadata?.height || (file.mediaType === "video" ? 1080 : 4000),
+      thumbnailLink: `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`,
+      folderName: file.folderName || null,
+      mediaType: (file.mediaType as "image" | "video") || "image",
+      videoStreamUrl: file.mediaType === "video" ? `https://drive.google.com/file/d/${file.id}/preview` : null,
     }));
   }
 }

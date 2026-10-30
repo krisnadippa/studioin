@@ -12,6 +12,7 @@ interface GalleryImageProps {
   className?: string;
   index?: number;
   priority?: boolean;
+  driveFileId?: string;
 }
 
 export function GalleryImage({
@@ -22,6 +23,7 @@ export function GalleryImage({
   className = "",
   index = 0,
   priority = false,
+  driveFileId,
 }: GalleryImageProps) {
   const [currentSrc, setCurrentSrc] = useState(src);
   const [errorStep, setErrorStep] = useState(0);
@@ -34,22 +36,28 @@ export function GalleryImage({
   }, [src]);
 
   const handleError = () => {
-    // Extract drive file ID if available
-    const match = currentSrc?.match(/(?:id=|\/d\/|drive-storage\/)([a-zA-Z0-9_-]+)/);
-    const driveId = match ? match[1] : null;
+    // Extract drive file ID if available (standard Google Drive IDs are >= 25 characters)
+    const match = currentSrc?.match(/(?:id=|\/d\/)([a-zA-Z0-9_-]{20,})/);
+    const driveId = driveFileId || (match ? match[1] : null);
 
     if (errorStep === 0 && driveId) {
       setErrorStep(1);
-      // Attempt 1: Standard Google Drive thumbnail
-      setCurrentSrc(`https://drive.google.com/thumbnail?id=${driveId}&sz=w800`);
-      return;
+      // Attempt 1: Standard canonical Google Drive thumbnail
+      const fallback1 = `https://drive.google.com/thumbnail?id=${driveId}&sz=w800`;
+      if (currentSrc !== fallback1) {
+        setCurrentSrc(fallback1);
+        return;
+      }
     }
 
-    if (errorStep === 1 && driveId) {
+    if (errorStep <= 1 && driveId) {
       setErrorStep(2);
       // Attempt 2: Direct Google Usercontent endpoint
-      setCurrentSrc(`https://lh3.googleusercontent.com/d/${driveId}=w800`);
-      return;
+      const fallback2 = `https://lh3.googleusercontent.com/d/${driveId}=w800`;
+      if (currentSrc !== fallback2) {
+        setCurrentSrc(fallback2);
+        return;
+      }
     }
 
     // Clean fail without showing mock/template photos

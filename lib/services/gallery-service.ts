@@ -114,10 +114,8 @@ export class GalleryService {
         const photoId = `photo-${galleryId}-${i + 1}`;
 
         // Direct high-quality Google Drive CDN thumbnail (~800px) and preview (~2048px)
-        const thumbUrl = file.thumbnailLink || `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
-        const previewUrl = file.thumbnailLink 
-          ? file.thumbnailLink.replace(/=s\d+$/, "=w2048").replace(/=w\d+$/, "=w2048")
-          : `https://drive.google.com/thumbnail?id=${file.id}&sz=w2048`;
+        const thumbUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w800`;
+        const previewUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w2048`;
 
         photos.push({
           id: photoId,
@@ -127,9 +125,12 @@ export class GalleryService {
           mime_type: file.mimeType,
           thumbnail_url: thumbUrl,
           preview_url: previewUrl,
-          width: file.width || 6000,
-          height: file.height || 4000,
+          width: file.width || (file.mediaType === "video" ? 1920 : 6000),
+          height: file.height || (file.mediaType === "video" ? 1080 : 4000),
           sort_order: i + 1,
+          folder_name: file.folderName || null,
+          media_type: file.mediaType || "image",
+          video_stream_url: file.videoStreamUrl || null,
           created_at: new Date().toISOString(),
         });
       }
