@@ -41,34 +41,22 @@ export async function GET(
     });
   }
 
-  // 2. STRATEGY 2: Fallback Streaming with Aggressive Vercel Edge Caching
-  const apiKey = process.env.GOOGLE_DRIVE_API_KEY;
+  // 2. STRATEGY 2: Direct Redirect to Google Drive High-Speed CDN Thumbnail (0 KB Vercel Bandwidth)
   const isMock =
     !photo.drive_file_id ||
     photo.drive_file_id.startsWith("drive-") ||
-    photo.drive_file_id.startsWith("drive_file_") ||
-    !apiKey ||
-    apiKey.includes("PASTE_API_KEY_ANDA_DI_SINI") ||
-    apiKey.trim() === "";
+    photo.drive_file_id.startsWith("drive_file_");
 
-  if (!isMock && apiKey && photo.drive_file_id) {
-    try {
-      const driveUrl = `https://www.googleapis.com/drive/v3/files/${photo.drive_file_id}?alt=media&key=${apiKey.trim()}`;
-      const driveRes = await fetch(driveUrl);
-      if (driveRes.ok && driveRes.body) {
-        return new Response(driveRes.body, {
-          headers: {
-            "Content-Type": driveRes.headers.get("Content-Type") || photo.mime_type || "image/jpeg",
-            // Edge caching prevents Vercel Serverless Function from re-invoking on repeated views
-            "Cache-Control": "public, max-age=31536000, s-maxage=31536000, stale-while-revalidate=86400, immutable",
-            "CDN-Cache-Control": "public, max-age=31536000, immutable",
-            "Vercel-CDN-Cache-Control": "public, max-age=31536000, immutable",
-          },
-        });
-      }
-    } catch (err) {
-      console.error("[Photo Proxy Error]", err);
-    }
+  if (!isMock && photo.drive_file_id) {
+    const cdnUrl = `https://drive.google.com/thumbnail?id=${photo.drive_file_id}&sz=${size === "hd" ? "w2048" : "w800"}`;
+    return NextResponse.redirect(cdnUrl, {
+      status: 307,
+      headers: {
+        "Cache-Control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000",
+        "CDN-Cache-Control": "public, max-age=604800",
+        "Vercel-CDN-Cache-Control": "public, max-age=604800",
+      },
+    });
   }
 
   // 3. Fallback to external preview/thumbnail if available

@@ -33,48 +33,23 @@ export async function GET(
     return NextResponse.json({ error: "Foto tidak ditemukan." }, { status: 404 });
   }
 
-  // 5. Perform the secure download from Google Drive or Fallback Mock url
-  const apiKey = process.env.GOOGLE_DRIVE_API_KEY;
+  // 5. Zero-Bandwidth Direct Download via Google Drive CDN
   const isMock =
+    !photo.drive_file_id ||
     photo.drive_file_id.startsWith("drive-") ||
-    photo.drive_file_id.startsWith("drive_file_") ||
-    !apiKey ||
-    apiKey.includes("PASTE_API_KEY_ANDA_DI_SINI") ||
-    apiKey.trim() === "";
+    photo.drive_file_id.startsWith("drive_file_");
 
-  if (!isMock && apiKey) {
-    try {
-      const url = `https://www.googleapis.com/drive/v3/files/${photo.drive_file_id}?alt=media&key=${apiKey.trim()}`;
-      const driveRes = await fetch(url);
-      if (driveRes.ok && driveRes.body) {
-        return new Response(driveRes.body, {
-          headers: {
-            "Content-Type": driveRes.headers.get("Content-Type") || photo.mime_type || "image/jpeg",
-            "Content-Disposition": `attachment; filename="${photo.filename}"`,
-          },
-        });
-      } else {
-        console.warn(`[GoogleDrive API Download Failed] Status ${driveRes.status}, falling back to preview URL.`);
-      }
-    } catch (err) {
-      console.error("[GoogleDrive API Download Exception]", err);
-    }
+  if (!isMock && photo.drive_file_id) {
+    // Redirect directly to Google Drive high-speed direct download link
+    // Vercel only sends ~150 bytes of HTTP 307 redirect instead of 25MB image file
+    const driveDownloadUrl = `https://drive.google.com/uc?export=download&id=${photo.drive_file_id}`;
+    return NextResponse.redirect(driveDownloadUrl, 307);
   }
 
-  // Fallback / Mock Mode: download from preview_url (e.g. Unsplash URL)
-  try {
-    const mockRes = await fetch(photo.preview_url);
-    if (mockRes.ok && mockRes.body) {
-      return new Response(mockRes.body, {
-        headers: {
-          "Content-Type": mockRes.headers.get("Content-Type") || "image/jpeg",
-          "Content-Disposition": `attachment; filename="${photo.filename}"`,
-        },
-      });
-    }
-  } catch (err) {
-    console.error("[Mock Download Fallback Exception]", err);
+  // Fallback / Mock Mode: redirect to preview_url (e.g. Unsplash URL)
+  if (photo.preview_url && (photo.preview_url.startsWith("http://") || photo.preview_url.startsWith("https://"))) {
+    return NextResponse.redirect(photo.preview_url, 307);
   }
 
-  return NextResponse.json({ error: "Gagal mengunduh foto dari Google Drive. Pastikan folder Drive dapat diakses publik atau coba beberapa saat lagi." }, { status: 500 });
+  return NextResponse.json({ error: "Gagal mengunduh foto dari Google Drive." }, { status: 500 });
 }

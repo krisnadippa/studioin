@@ -230,11 +230,29 @@ export default function GallerySelectionsPage({
           filename: photo.filename,
         });
 
-        const response = await fetch(`/api/admin/galleries/${id}/download/${photo.id}`);
-        if (!response.ok) {
-          throw new Error(`Gagal mengunduh ${photo.filename}`);
+        // Direct fetch from Google CDN (CORS supported, 0 KB Vercel Bandwidth)
+        const directCdnUrl = photo.drive_file_id
+          ? `https://lh3.googleusercontent.com/d/${photo.drive_file_id}=w2048`
+          : (photo.preview_url || photo.thumbnail_url);
+
+        let blob: Blob | null = null;
+        try {
+          const directRes = await fetch(directCdnUrl);
+          if (directRes.ok) {
+            blob = await directRes.blob();
+          }
+        } catch {
+          // fallback to streaming endpoint if CORS fails
         }
-        const blob = await response.blob();
+
+        if (!blob) {
+          const response = await fetch(`/api/admin/galleries/${id}/download/${photo.id}?mode=stream`);
+          if (!response.ok) {
+            throw new Error(`Gagal mengunduh ${photo.filename}`);
+          }
+          blob = await response.blob();
+        }
+
         folder.file(photo.filename, blob);
       }
 

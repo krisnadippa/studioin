@@ -66,42 +66,54 @@ export async function GET(
   const selections = await db.getSelectionsByGalleryId(gallery.id);
   const latestSelection = selections.length > 0 ? selections[0] : null;
 
+  // Cache-Control: if gallery has PIN, keep private. Otherwise, cache at Vercel Edge CDN for 60s
+  const cacheControl = gallery.has_pin
+    ? "private, no-cache"
+    : "public, s-maxage=60, stale-while-revalidate=300";
+
   // Return public safe gallery data (no internal folder IDs, no secret hashes)
-  return NextResponse.json({
-    gallery: {
-      id: gallery.id,
-      client_name: gallery.client_name,
-      event_name: gallery.event_name,
-      event_date: gallery.event_date,
-      status: gallery.status,
-      error_message: gallery.error_message,
-      total_photos: gallery.total_photos || photos.length,
-      expires_at: gallery.expires_at,
-      has_pin: gallery.has_pin,
-      max_selections: gallery.max_selections,
-      allow_download: gallery.allow_download,
+  return NextResponse.json(
+    {
+      gallery: {
+        id: gallery.id,
+        client_name: gallery.client_name,
+        event_name: gallery.event_name,
+        event_date: gallery.event_date,
+        status: gallery.status,
+        error_message: gallery.error_message,
+        total_photos: gallery.total_photos || photos.length,
+        expires_at: gallery.expires_at,
+        has_pin: gallery.has_pin,
+        max_selections: gallery.max_selections,
+        allow_download: gallery.allow_download,
+      },
+      latest_selection: latestSelection
+        ? {
+            id: latestSelection.id,
+            selected_photo_ids: latestSelection.selected_photo_ids,
+            submitted_at: latestSelection.submitted_at,
+            client_notes: latestSelection.client_notes,
+            client_email: latestSelection.client_email,
+          }
+        : null,
+      photos: photos.map((p) => ({
+        id: p.id,
+        drive_file_id: p.drive_file_id,
+        filename: p.filename,
+        thumbnail_url: p.thumbnail_url,
+        preview_url: p.preview_url,
+        width: p.width,
+        height: p.height,
+        sort_order: p.sort_order,
+        folder_name: p.folder_name || null,
+        media_type: p.media_type || "image",
+        video_stream_url: p.video_stream_url || null,
+      })),
     },
-    latest_selection: latestSelection
-      ? {
-          id: latestSelection.id,
-          selected_photo_ids: latestSelection.selected_photo_ids,
-          submitted_at: latestSelection.submitted_at,
-          client_notes: latestSelection.client_notes,
-          client_email: latestSelection.client_email,
-        }
-      : null,
-    photos: photos.map((p) => ({
-      id: p.id,
-      drive_file_id: p.drive_file_id,
-      filename: p.filename,
-      thumbnail_url: p.thumbnail_url,
-      preview_url: p.preview_url,
-      width: p.width,
-      height: p.height,
-      sort_order: p.sort_order,
-      folder_name: p.folder_name || null,
-      media_type: p.media_type || "image",
-      video_stream_url: p.video_stream_url || null,
-    })),
-  });
+    {
+      headers: {
+        "Cache-Control": cacheControl,
+      },
+    }
+  );
 }
