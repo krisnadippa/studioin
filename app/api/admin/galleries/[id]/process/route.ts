@@ -3,6 +3,8 @@ import { AuthService } from "@/lib/services/auth-service";
 import { GalleryService } from "@/lib/services/gallery-service";
 import { db } from "@/lib/db/store";
 
+export const maxDuration = 60;
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -83,7 +83,7 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
     };
   }
 
-  async listFiles(folderId: string, limit: number = 1000): Promise<DriveFileMetadata[]> {
+  async listFiles(folderId: string, limit: number = 5000): Promise<DriveFileMetadata[]> {
     const apiKey = this.getApiKey();
     if (!apiKey) {
       throw new Error("Layanan Google Drive belum dikonfigurasi di server (GOOGLE_DRIVE_API_KEY). Silakan hubungi admin sistem.");
@@ -189,18 +189,42 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
 
       do {
         // Query items inside current folder (excluding trashed)
+        const remaining = limit - allFiles.length;
+        const pageSize = Math.min(Math.max(remaining, 1), 1000);
         const query = encodeURIComponent(`'${currentFolder.id}' in parents and trashed = false`);
         const fields = encodeURIComponent("nextPageToken,files(id,name,mimeType,thumbnailLink,imageMediaMetadata,size)");
-        let url = `https://www.googleapis.com/drive/v3/files?q=${query}&orderBy=name&fields=${fields}&pageSize=100&key=${apiKey}`;
+        let url = `https://www.googleapis.com/drive/v3/files?q=${query}&orderBy=name&fields=${fields}&pageSize=${pageSize}&key=${apiKey}`;
         if (pageToken) {
           url += `&pageToken=${pageToken}`;
         }
 
-        const res = await fetch(url);
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          console.error(`[GoogleDrive API listFiles Error] Status: ${res.status}`, errData);
-          if (res.status === 404 || res.status === 403) {
+        let res: Response | null = null;
+        let retries = 0;
+        while (retries < 3) {
+          try {
+            res = await fetch(url);
+            if (res.status === 429 || res.status >= 500) {
+              retries++;
+              if (retries < 3) {
+                await new Promise((r) => setTimeout(r, retries * 1000));
+                continue;
+              }
+            }
+            break;
+          } catch (netErr) {
+            retries++;
+            if (retries < 3) {
+              await new Promise((r) => setTimeout(r, retries * 1000));
+              continue;
+            }
+            throw netErr;
+          }
+        }
+
+        if (!res || !res.ok) {
+          const errData = res ? await res.json().catch(() => ({})) : {};
+          console.error(`[GoogleDrive API listFiles Error] Status: ${res?.status}`, errData);
+          if (res?.status === 404 || res?.status === 403) {
             // Only throw error if the root shared folder itself is inaccessible
             if (currentFolder.id === folderId) {
               throw new Error(
@@ -211,7 +235,7 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
             break;
           }
           throw new Error(
-            `Gagal mengakses Google Drive (${errData?.error?.message || `HTTP ${res.status} ${res.statusText}`}). Pastikan link folder Google Drive benar dan dapat diakses publik.`
+            `Gagal mengakses Google Drive (${errData?.error?.message || `HTTP ${res?.status || "Network Error"} ${res?.statusText || ""}`}). Pastikan link folder Google Drive benar dan dapat diakses publik.`
           );
         }
 
@@ -219,8 +243,8 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
         if (data.files && Array.isArray(data.files)) {
           for (const item of data.files) {
             if (item.mimeType === "application/vnd.google-apps.folder") {
-              // Queue subfolder to scan (cap at 25 folders to avoid infinite loops)
-              if (scannedFolders.size + foldersToScan.length < 25) {
+              // Queue subfolder to scan (cap at 60 folders to avoid infinite loops)
+              if (scannedFolders.size + foldersToScan.length < 60) {
                 const subfolderDisplayName = currentFolder.name ? `${currentFolder.name} / ${item.name}` : item.name;
                 foldersToScan.push({ id: item.id, name: subfolderDisplayName });
               }

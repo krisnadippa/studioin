@@ -6,6 +6,8 @@ import { db } from "@/lib/db/store";
 import { Gallery } from "@/lib/db/types";
 import bcrypt from "bcryptjs";
 
+export const maxDuration = 60;
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

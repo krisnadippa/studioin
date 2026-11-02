@@ -99,8 +99,11 @@ export class GalleryService {
     try {
       await db.updateGallery(galleryId, { status: "processing", processed_photos: 0 });
 
-      // Fetch files metadata from Drive
-      const driveFiles = await googleDriveService.listFiles(driveFolderId, 1000);
+      // Fetch files metadata from Drive (supports up to 5000 photos, configurable via MAX_GALLERY_PHOTOS)
+      const maxPhotos = typeof process !== "undefined" && process.env.MAX_GALLERY_PHOTOS 
+        ? parseInt(process.env.MAX_GALLERY_PHOTOS, 10) 
+        : 5000;
+      const driveFiles = await googleDriveService.listFiles(driveFolderId, maxPhotos);
       if (driveFiles.length === 0) {
         throw new Error(
           "Folder Google Drive berhasil diakses, namun tidak ditemukan file foto di dalamnya. Pastikan folder berisi foto berformat JPG, PNG, WEBP, atau file RAW kamera (CR2, CR3, ARW, NEF, DNG, RAF, dll)."
