@@ -66,10 +66,8 @@ export async function GET(
   const selections = await db.getSelectionsByGalleryId(gallery.id);
   const latestSelection = selections.length > 0 ? selections[0] : null;
 
-  // Cache-Control: if gallery has PIN, keep private. Otherwise, cache at Vercel Edge CDN for 60s
-  const cacheControl = gallery.has_pin
-    ? "private, no-cache"
-    : "public, s-maxage=60, stale-while-revalidate=300";
+  // Cache-Control: no-cache to ensure customer immediately sees changes when admin edits allow_download, PIN, or settings
+  const cacheControl = "no-store, no-cache, must-revalidate, proxy-revalidate";
 
   // Return public safe gallery data (no internal folder IDs, no secret hashes)
   return NextResponse.json(
@@ -85,7 +83,7 @@ export async function GET(
         expires_at: gallery.expires_at,
         has_pin: gallery.has_pin,
         max_selections: gallery.max_selections,
-        allow_download: gallery.allow_download,
+        allow_download: Boolean(gallery.allow_download),
       },
       latest_selection: latestSelection
         ? {

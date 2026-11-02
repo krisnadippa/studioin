@@ -21,8 +21,9 @@ export async function GET(
     return NextResponse.json({ error: "Masa aktif galeri foto ini telah berakhir." }, { status: 403 });
   }
 
-  // 3. Check if downloads are allowed
-  if (!gallery.allow_download) {
+  // 3. Check if downloads are allowed (robust against any DB type representation)
+  const isDownloadAllowed = Boolean(gallery.allow_download) || gallery.allow_download === true || String(gallery.allow_download) === "true";
+  if (!isDownloadAllowed) {
     return NextResponse.json({ error: "Fitur unduh foto dinonaktifkan oleh fotografer untuk galeri ini." }, { status: 403 });
   }
 

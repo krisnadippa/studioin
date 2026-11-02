@@ -1243,7 +1243,7 @@ export default function ClientGalleryPage({
                         href={`/api/gallery/${token}/download/${photo.id}`}
                         download
                         onClick={(e) => e.stopPropagation()}
-                        className="absolute bottom-2.5 right-2.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/50 hover:bg-black/80 text-white border border-white/40 flex items-center justify-center transition-all duration-150 z-20 opacity-0 group-hover:opacity-100"
+                        className="absolute bottom-2.5 right-2.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/60 hover:bg-black/85 text-white border border-white/40 flex items-center justify-center transition-all duration-150 z-20 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 shadow-md"
                         title="Download HD photo"
                       >
                         <Download className="w-3.5 h-3.5" />

@@ -92,6 +92,7 @@ class NeonDatabase {
           await sql`ALTER TABLE photos ADD COLUMN IF NOT EXISTS folder_name VARCHAR(255) DEFAULT NULL`;
           await sql`ALTER TABLE photos ADD COLUMN IF NOT EXISTS media_type VARCHAR(20) DEFAULT 'image'`;
           await sql`ALTER TABLE photos ADD COLUMN IF NOT EXISTS video_stream_url TEXT DEFAULT NULL`;
+          await sql`ALTER TABLE galleries ADD COLUMN IF NOT EXISTS allow_download BOOLEAN DEFAULT FALSE`;
         } catch (e) {
           console.warn("[NeonDatabase] Column migration warning (safe to ignore):", e);
         }
