@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use, useMemo } from "react";
+import { useEffect, useState, use, useMemo, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { GalleryImage } from "@/components/gallery/GalleryImage";
@@ -225,6 +225,39 @@ export default function GalleryDetailPage({
     if (selectedFolder === "__video__") return videoPhotos;
     return photos.filter((p) => (p.folder_name || "").trim() === selectedFolder);
   }, [photos, selectedFolder, videoPhotos]);
+
+  // Progressive rendering for large galleries (10,000+ files)
+  const [visibleCount, setVisibleCount] = useState(80);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setVisibleCount(80);
+  }, [selectedFolder]);
+
+  useEffect(() => {
+    const target = loadMoreSentinelRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((prev) => {
+            if (prev < filteredPhotos.length) {
+              return Math.min(prev + 80, filteredPhotos.length);
+            }
+            return prev;
+          });
+        }
+      },
+      { rootMargin: "600px" }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [filteredPhotos.length]);
+
+  const visiblePhotos = useMemo(
+    () => filteredPhotos.slice(0, visibleCount),
+    [filteredPhotos, visibleCount]
+  );
 
   // Keyboard navigation for Lightbox
   useEffect(() => {
@@ -626,56 +659,74 @@ export default function GalleryDetailPage({
               Tidak ada file pada filter ini.
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {filteredPhotos.map((photo, index) => (
-                <div
-                  key={photo.id}
-                  onClick={() => setLightboxIndex(index)}
-                  className="group relative aspect-[4/3] rounded-xl overflow-hidden bg-zinc-100 border border-zinc-200/60 shadow-xs cursor-pointer hover:border-[#114234] hover:shadow-md transition-all duration-200"
-                >
-                  <GalleryImage
-                    src={photo.thumbnail_url}
-                    alt={photo.filename}
-                    driveFileId={photo.drive_file_id}
-                    fill
-                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    index={index}
-                  />
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {visiblePhotos.map((photo, index) => {
+                  const fullIndex = filteredPhotos.findIndex((p) => p.id === photo.id);
+                  return (
+                    <div
+                      key={photo.id}
+                      onClick={() => setLightboxIndex(fullIndex >= 0 ? fullIndex : index)}
+                      className="group relative aspect-[4/3] rounded-xl overflow-hidden bg-zinc-100 border border-zinc-200/60 shadow-xs cursor-pointer hover:border-[#114234] hover:shadow-md transition-all duration-200"
+                    >
+                      <GalleryImage
+                        src={photo.thumbnail_url}
+                        alt={photo.filename}
+                        driveFileId={photo.drive_file_id}
+                        fill
+                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        index={index}
+                      />
 
-                  {/* Badges: Folder & Video */}
-                  <div className="absolute top-2 left-2 flex flex-col gap-1 z-10 pointer-events-none">
-                    {photo.folder_name && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-black/60 text-white backdrop-blur-xs shadow-xs">
-                        <Folder className="w-2.5 h-2.5 text-[#bef238]" />
-                        <span className="truncate max-w-[90px]">{photo.folder_name}</span>
-                      </span>
-                    )}
-                    {photo.media_type === "video" && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-purple-600/90 text-white backdrop-blur-xs shadow-xs">
-                        <Play className="w-2.5 h-2.5 fill-white" />
-                        <span>VIDEO</span>
-                      </span>
-                    )}
-                  </div>
+                      {/* Badges: Folder & Video */}
+                      <div className="absolute top-2 left-2 flex flex-col gap-1 z-10 pointer-events-none">
+                        {photo.folder_name && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold bg-black/60 text-white backdrop-blur-xs shadow-xs">
+                            <Folder className="w-2.5 h-2.5 text-[#bef238]" />
+                            <span className="truncate max-w-[90px]">{photo.folder_name}</span>
+                          </span>
+                        )}
+                        {photo.media_type === "video" && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-purple-600/90 text-white backdrop-blur-xs shadow-xs">
+                            <Play className="w-2.5 h-2.5 fill-white" />
+                            <span>VIDEO</span>
+                          </span>
+                        )}
+                      </div>
 
-                  {/* Center hover indicator / play icon */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="p-2 bg-white/20 backdrop-blur-xs rounded-full text-white">
-                      {photo.media_type === "video" ? (
-                        <Play className="w-5 h-5 fill-white" />
-                      ) : (
-                        <ZoomIn className="w-5 h-5" />
-                      )}
+                      {/* Center hover indicator / play icon */}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div className="p-2 bg-white/20 backdrop-blur-xs rounded-full text-white">
+                          {photo.media_type === "video" ? (
+                            <Play className="w-5 h-5 fill-white" />
+                          ) : (
+                            <ZoomIn className="w-5 h-5" />
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white text-[10px] font-mono truncate">
+                        {photo.filename}
+                      </div>
                     </div>
-                  </div>
+                  );
+                })}
+              </div>
 
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-white text-[10px] font-mono truncate">
-                    {photo.filename}
-                  </div>
+              {/* Infinite scroll sentinel & Load More button */}
+              {visibleCount < filteredPhotos.length && (
+                <div ref={loadMoreSentinelRef} className="flex flex-col items-center justify-center pt-8 pb-4 gap-3">
+                  <button
+                    onClick={() => setVisibleCount((prev) => Math.min(prev + 80, filteredPhotos.length))}
+                    className="px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs shadow-md transition-all active:scale-95 flex items-center gap-2 border border-zinc-700 cursor-pointer"
+                  >
+                    <span>Tampilkan Lebih Banyak Foto</span>
+                    <span className="text-zinc-400 font-mono">({visiblePhotos.length} dari {filteredPhotos.length})</span>
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </section>
 

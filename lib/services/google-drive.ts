@@ -83,7 +83,7 @@ export class HybridGoogleDriveService implements IGoogleDriveService {
     };
   }
 
-  async listFiles(folderId: string, limit: number = 5000): Promise<DriveFileMetadata[]> {
+  async listFiles(folderId: string, limit: number = 10000): Promise<DriveFileMetadata[]> {
     const apiKey = this.getApiKey();
     if (!apiKey) {
       throw new Error("Layanan Google Drive belum dikonfigurasi di server (GOOGLE_DRIVE_API_KEY). Silakan hubungi admin sistem.");

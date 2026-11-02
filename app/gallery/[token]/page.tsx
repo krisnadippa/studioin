@@ -454,6 +454,39 @@ export default function ClientGalleryPage({
     return list;
   }, [allPhotoItems, allVideoItems, activeCategory, activeFilter, selectedIds, searchQuery]);
 
+  // Progressive rendering for large galleries (up to 10,000 files) to ensure fluid scrolling on mobile devices
+  const [visibleCount, setVisibleCount] = useState(80);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setVisibleCount(80);
+  }, [activeCategory, activeFilter, searchQuery]);
+
+  useEffect(() => {
+    const target = loadMoreSentinelRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((prev) => {
+            if (prev < filteredPhotos.length) {
+              return Math.min(prev + 80, filteredPhotos.length);
+            }
+            return prev;
+          });
+        }
+      },
+      { rootMargin: "600px" }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [filteredPhotos.length]);
+
+  const visiblePhotos = useMemo(
+    () => filteredPhotos.slice(0, visibleCount),
+    [filteredPhotos, visibleCount]
+  );
+
   // Preload adjacent photos to eliminate lag when swiping/clicking next & previous
   useEffect(() => {
     if (lightboxIndex === null) return;
@@ -1155,75 +1188,91 @@ export default function ClientGalleryPage({
           </div>
         ) : (
           /* 4. Photos Grid */
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-            {filteredPhotos.map((photo, index) => {
-              const isSelected = selectedIds.has(photo.id);
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+              {visiblePhotos.map((photo, index) => {
+                const isSelected = selectedIds.has(photo.id);
+                const fullIndex = filteredPhotos.findIndex((p) => p.id === photo.id);
 
-              return (
-                <div
-                  key={photo.id}
-                  onClick={() => setLightboxIndex(index)}
-                  className={`group relative aspect-[4/3] rounded-2xl overflow-hidden bg-zinc-100 cursor-pointer transition-all duration-200 border-2 ${
-                    isSelected
-                      ? "border-[#114234] ring-2 ring-[#bef238] shadow-md scale-[0.99]"
-                      : "border-transparent hover:border-zinc-300 shadow-xs"
-                  }`}
-                >
-                  <GalleryImage
-                    src={photo.thumbnail_url}
-                    alt={photo.filename}
-                    fill
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                    className="object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
-                    index={index}
-                  />
-
-                  {/* Gradient bottom overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-
-                  {/* Selection Button */}
-                  <button
-                    onClick={(e) => toggleSelect(photo.id, e)}
-                    className={`absolute top-2.5 left-2.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-150 z-20 ${
+                return (
+                  <div
+                    key={photo.id}
+                    onClick={() => setLightboxIndex(fullIndex >= 0 ? fullIndex : index)}
+                    className={`group relative aspect-[4/3] rounded-2xl overflow-hidden bg-zinc-100 cursor-pointer transition-all duration-200 border-2 ${
                       isSelected
-                        ? "bg-[#114234] text-[#bef238] shadow-md scale-105"
-                        : "bg-black/40 hover:bg-black/60 text-white border border-white/40"
+                        ? "border-[#114234] ring-2 ring-[#bef238] shadow-md scale-[0.99]"
+                        : "border-transparent hover:border-zinc-300 shadow-xs"
                     }`}
-                    title={isSelected ? "Batal pilih foto" : "Pilih foto"}
                   >
-                    <Check className={`w-4 h-4 stroke-[2.5] ${isSelected ? "text-[#bef238]" : "text-white"}`} />
-                  </button>
+                    <GalleryImage
+                      src={photo.thumbnail_url}
+                      alt={photo.filename}
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
+                      index={index}
+                    />
 
-                  {/* Subfolder Badge (if photo belongs to a subfolder) */}
-                  {photo.folder_name && activeCategory === "all" && (
-                    <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[9px] font-mono font-bold text-zinc-200 z-10 flex items-center gap-1">
-                      <Folder className="w-2.5 h-2.5 text-[#bef238]" />
-                      <span className="truncate max-w-[70px]">{photo.folder_name}</span>
-                    </div>
-                  )}
+                    {/* Gradient bottom overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 
-                  {/* Download Button */}
-                  {gallery?.allow_download && (
-                    <a
-                      href={`/api/gallery/${token}/download/${photo.id}`}
-                      download
-                      onClick={(e) => e.stopPropagation()}
-                      className="absolute bottom-2.5 right-2.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/50 hover:bg-black/80 text-white border border-white/40 flex items-center justify-center transition-all duration-150 z-20 opacity-0 group-hover:opacity-100"
-                      title="Download HD photo"
+                    {/* Selection Button */}
+                    <button
+                      onClick={(e) => toggleSelect(photo.id, e)}
+                      className={`absolute top-2.5 left-2.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-150 z-20 ${
+                        isSelected
+                          ? "bg-[#114234] text-[#bef238] shadow-md scale-105"
+                          : "bg-black/40 hover:bg-black/60 text-white border border-white/40"
+                      }`}
+                      title={isSelected ? "Batal pilih foto" : "Pilih foto"}
                     >
-                      <Download className="w-3.5 h-3.5" />
-                    </a>
-                  )}
+                      <Check className={`w-4 h-4 stroke-[2.5] ${isSelected ? "text-[#bef238]" : "text-white"}`} />
+                    </button>
 
-                  {/* Filename & Zoom trigger on hover */}
-                  <div className="absolute inset-x-0 bottom-0 p-2.5 text-white flex items-center justify-between text-[11px] font-mono z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                    <span className="truncate max-w-[100px]">{photo.filename}</span>
-                    <ZoomIn className="w-3.5 h-3.5 text-white/80" />
+                    {/* Subfolder Badge (if photo belongs to a subfolder) */}
+                    {photo.folder_name && activeCategory === "all" && (
+                      <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[9px] font-mono font-bold text-zinc-200 z-10 flex items-center gap-1">
+                        <Folder className="w-2.5 h-2.5 text-[#bef238]" />
+                        <span className="truncate max-w-[70px]">{photo.folder_name}</span>
+                      </div>
+                    )}
+
+                    {/* Download Button */}
+                    {gallery?.allow_download && (
+                      <a
+                        href={`/api/gallery/${token}/download/${photo.id}`}
+                        download
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute bottom-2.5 right-2.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/50 hover:bg-black/80 text-white border border-white/40 flex items-center justify-center transition-all duration-150 z-20 opacity-0 group-hover:opacity-100"
+                        title="Download HD photo"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+
+                    {/* Filename & Zoom trigger on hover */}
+                    <div className="absolute inset-x-0 bottom-0 p-2.5 text-white flex items-center justify-between text-[11px] font-mono z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                      <span className="truncate max-w-[100px]">{photo.filename}</span>
+                      <ZoomIn className="w-3.5 h-3.5 text-white/80" />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+
+            {/* Infinite scroll sentinel & Load More button */}
+            {visibleCount < filteredPhotos.length && (
+              <div ref={loadMoreSentinelRef} className="flex flex-col items-center justify-center pt-8 pb-12 gap-3">
+                <button
+                  onClick={() => setVisibleCount((prev) => Math.min(prev + 80, filteredPhotos.length))}
+                  className="px-6 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center gap-2 border border-zinc-700 cursor-pointer"
+                >
+                  <span>Tampilkan Lebih Banyak Foto</span>
+                  <span className="text-zinc-400 font-mono">({visiblePhotos.length} dari {filteredPhotos.length})</span>
+                </button>
+              </div>
+            )}
+          </>
         )}
       </main>
 

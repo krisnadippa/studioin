@@ -99,10 +99,10 @@ export class GalleryService {
     try {
       await db.updateGallery(galleryId, { status: "processing", processed_photos: 0 });
 
-      // Fetch files metadata from Drive (supports up to 5000 photos, configurable via MAX_GALLERY_PHOTOS)
+      // Fetch files metadata from Drive (supports up to 10000 photos, configurable via MAX_GALLERY_PHOTOS)
       const maxPhotos = typeof process !== "undefined" && process.env.MAX_GALLERY_PHOTOS 
         ? parseInt(process.env.MAX_GALLERY_PHOTOS, 10) 
-        : 5000;
+        : 10000;
       const driveFiles = await googleDriveService.listFiles(driveFolderId, maxPhotos);
       if (driveFiles.length === 0) {
         throw new Error(
